@@ -160,6 +160,43 @@
     .ann-actions{display:flex;gap:8px;margin-top:12px}
     .ann-actions .btn{flex:1;padding:10px}
 
+    /* DECK / FILE SWITCHER */
+    .deck-panel{position:absolute;top:46px;left:6px;width:270px;background:var(--card);border:1px solid var(--border);border-radius:10px;z-index:50;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+    .deck-panel.hidden{display:none}
+    .deck-panel-head{padding:10px 14px 8px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+    .deck-panel-title{font-size:12px;font-weight:700;color:var(--lblue);letter-spacing:.5px}
+    .deck-list-inner{max-height:240px;overflow-y:auto}
+    .deck-item{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid rgba(42,63,107,.5);cursor:pointer;transition:background .15s}
+    .deck-item:hover{background:rgba(255,255,255,.07)}
+    .deck-item.on{background:rgba(37,99,168,.3);border-left:3px solid var(--blue)}
+    .deck-item:not(.on){border-left:3px solid transparent}
+    .deck-item-icon{font-size:17px;flex-shrink:0}
+    .deck-item-info{flex:1;min-width:0}
+    .deck-item-name{font-size:12px;color:var(--white);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .deck-item-sub{font-size:10px;color:var(--gray)}
+    .deck-item-del{background:none;border:none;color:var(--gray);cursor:pointer;font-size:14px;padding:2px 4px;flex-shrink:0;opacity:0;transition:opacity .15s}
+    .deck-item:hover .deck-item-del{opacity:1}
+    .deck-add-row{display:flex;border-top:1px solid var(--border)}
+    .deck-add-btn{flex:1;padding:9px;background:none;border:none;border-right:1px solid var(--border);color:var(--lblue);cursor:pointer;font-size:12px;font-weight:600}
+    .deck-add-btn:last-child{border-right:none}
+    .deck-add-btn:hover{background:rgba(37,99,168,.2)}
+    .deck-empty{padding:16px;color:var(--gray);font-size:12px;text-align:center}
+
+    /* Annotator file switcher (bottom of slide-nav or top bar) */
+    .draw-deck-panel{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+    .draw-deck-panel.show{display:flex}
+    .draw-deck-box{background:var(--card);border:1px solid var(--border);border-radius:12px;width:100%;max-width:340px;overflow:hidden}
+    .draw-deck-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+    .draw-deck-title{font-size:14px;font-weight:700;color:var(--white)}
+    .draw-deck-sub{font-size:11px;color:var(--gray);margin-top:2px}
+    .draw-deck-list{max-height:300px;overflow-y:auto}
+    .draw-deck-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(42,63,107,.5);cursor:pointer;transition:background .15s}
+    .draw-deck-item:hover{background:rgba(255,255,255,.07)}
+    .draw-deck-item.on{background:rgba(37,99,168,.3);border-left:3px solid var(--blue)}
+    .draw-deck-item:not(.on){border-left:3px solid transparent}
+    .draw-deck-item-name{font-size:13px;color:var(--white);font-weight:500}
+    .draw-deck-item-sub{font-size:11px;color:var(--gray)}
+
     /* Guest announcement banner */
     .guest-announce{position:absolute;top:54px;left:0;right:0;background:linear-gradient(135deg,#1a3460,#0f2a50);border-bottom:2px solid var(--blue);padding:10px 16px;display:none;align-items:center;gap:10px;z-index:15;animation:slideDown .3s ease}
     .guest-announce.show{display:flex}
@@ -275,6 +312,7 @@
       <button id="pill-pdf" onclick="switchPresMode('pdf')">PDF/PPT</button>
       <button id="pill-wb"  onclick="switchPresMode('wb')">WB</button>
     </div>
+    <button class="icon-btn" onclick="toggleDeckPanel()" title="Switch File" style="font-size:12px;gap:3px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:6px;padding:4px 8px">📁 <span id="deck-cur-name" style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">No file</span></button>
     <button class="icon-btn" onclick="toggleQR()"                  title="QR">📱</button>
     <button class="icon-btn" onclick="showCurrentPassword()"       title="Show Password">🔑</button>
     <button class="icon-btn" onclick="openAnnounce('annotator')"   title="Notify Annotator" style="font-size:13px">🔔 Ann</button>
@@ -318,6 +356,23 @@
   </div>
 
   <!-- Q&A backdrop -->
+  <!-- DECK SWITCHER PANEL (presenter) -->
+  <div class="deck-panel hidden" id="deck-panel-pres">
+    <div class="deck-panel-head">
+      <div class="deck-panel-title">📁 LOADED FILES</div>
+      <button class="icon-btn" onclick="toggleDeckPanel()" style="font-size:13px">✕</button>
+    </div>
+    <div class="deck-list-inner" id="deck-list-pres">
+      <div class="deck-empty">No files loaded yet.</div>
+    </div>
+    <div class="deck-add-row">
+      <button class="deck-add-btn" onclick="document.getElementById('pdf-file-add').click()">+ PDF</button>
+      <button class="deck-add-btn" onclick="document.getElementById('img-file-add').click()">+ PPT Slides</button>
+    </div>
+    <input type="file" id="pdf-file-add" accept="application/pdf" style="display:none" onchange="addPDF(this)">
+    <input type="file" id="img-file-add" accept="image/*" multiple style="display:none" onchange="addImages(this)">
+  </div>
+
   <div class="qa-backdrop" id="qa-backdrop-pres" onclick="toggleQA('pres')"></div>
   <!-- Q&A panel -->
   <div class="qa-panel" id="qa-panel-pres">
@@ -351,9 +406,26 @@
     <span class="status-dot" id="draw-dot"></span>
     <span class="bar-title"  id="draw-status">Connecting…</span>
     <span id="draw-mode-badge" class="badge badge-gray">—</span>
+    <button class="icon-btn" onclick="toggleDrawDeckPanel()" title="Switch File" style="font-size:12px;gap:3px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:6px;padding:4px 8px">📁 Files</button>
     <button class="icon-btn" onclick="undoStroke()"  title="Undo">↩</button>
     <button class="icon-btn" onclick="goFullscreen()" title="Fullscreen">⛶</button>
     <button class="icon-btn" onclick="goHome()"       title="Exit" style="color:#EF4444">✕</button>
+  </div>
+
+  <!-- Annotator deck switcher overlay -->
+  <div class="draw-deck-panel" id="draw-deck-panel">
+    <div class="draw-deck-box">
+      <div class="draw-deck-head">
+        <div>
+          <div class="draw-deck-title">📁 Switch File</div>
+          <div class="draw-deck-sub" id="draw-deck-sub">Select a file to switch to</div>
+        </div>
+        <button class="icon-btn" onclick="toggleDrawDeckPanel()">✕</button>
+      </div>
+      <div class="draw-deck-list" id="draw-deck-list">
+        <div class="deck-empty">No files loaded by presenter yet.</div>
+      </div>
+    </div>
   </div>
 
   <!-- Main adaptive area: portrait=column, landscape=row (via CSS) -->
@@ -494,6 +566,7 @@ let myRole='';             // 'annotator' | 'guest'
 let pendingJoinRole='';
 
 let pdfDoc=null,imgSlides=[],currentPage=1,totalPages=1,contentType='none';
+let decks=[],currentDeckIndex=-1; // multi-file deck manager
 let annotations={},wbStrokes=[],currentStroke=null;
 let drawColor='#EF4444',drawWidth=3,isEraser=false;
 let presMode='pdf',drawerMode='pdf';
@@ -508,7 +581,7 @@ function goHome(){
   if(presenterPeer){try{presenterPeer.destroy()}catch(e){}presenterPeer=null}
   if(clientConn){try{clientConn.close()}catch(e){}clientConn=null}
   if(clientPeer){try{clientPeer.destroy()}catch(e){}clientPeer=null}
-  pdfDoc=null;imgSlides=[];currentPage=1;totalPages=1;contentType='none';
+  pdfDoc=null;imgSlides=[];currentPage=1;totalPages=1;contentType='none';decks=[];currentDeckIndex=-1;
   annotations={};wbStrokes=[];questions=[];unreadQ=0;myRole='';
   document.getElementById('upload-overlay').style.display='flex';
   document.getElementById('page-nav').style.display='none';
@@ -586,8 +659,9 @@ function startPresenter(mode){
         } else if(d.role==='guest'){
           guestCounter++;const gNum=guestCounter;guestConns.set(c.peer,c);
           c.send({type:'mode_set',mode:presMode,guestNum:gNum});
-          if(presMode==='pdf'&&(pdfDoc||imgSlides.length))sendPageToConn(c,true);
-          else if(presMode==='wb')sendWbSnapshotToConn(c);
+          // Small delay so connection is stable before pushing image data
+          if(presMode==='pdf'&&(pdfDoc||imgSlides.length))setTimeout(()=>sendLowResToGuest(c),600);
+          else if(presMode==='wb')setTimeout(()=>sendWbSnapshotToConn(c,true),600);
           updatePresenterBadge();toast(`👁 Guest #${gNum} joined`);
           c.on('close',()=>{guestConns.delete(c.peer);updatePresenterBadge();toast(`Guest #${gNum} left`)});
         }
@@ -617,8 +691,10 @@ function switchPresMode(mode){
   const msg={type:'mode_set',mode};
   if(annotatorConn)annotatorConn.send(msg);
   guestConns.forEach(c=>c.send(msg));
-  if(mode==='pdf'&&(pdfDoc||imgSlides.length)){sendPageToConn(annotatorConn);guestConns.forEach(c=>sendPageToConn(c,true))}
-  else if(mode==='wb'){sendWbSnapshot();guestConns.forEach(c=>sendWbSnapshotToConn(c))}
+  if(mode==='pdf'&&(pdfDoc||imgSlides.length)){
+    if(annotatorConn)sendPageToConn(annotatorConn,false);
+    let i=0;guestConns.forEach(c=>{setTimeout(()=>sendLowResToGuest(c),i++*300)});
+  } else if(mode==='wb'){sendWbSnapshotThrottled()}
 }
 
 // QR
@@ -709,32 +785,109 @@ function clearQuestions(){
 
 function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
-// PDF / IMAGE LOADING
-async function loadPDF(input){
-  const file=input.files[0];if(!file)return;
-  document.getElementById('upload-overlay').style.display='none';
-  const buf=await file.arrayBuffer();
-  pdfDoc=await pdfjsLib.getDocument({data:buf}).promise;
-  imgSlides=[];contentType='pdf';totalPages=pdfDoc.numPages;currentPage=1;annotations={};
-  document.getElementById('page-nav').style.display=totalPages>1?'flex':'none';
-  await renderPresenterPage(currentPage);
-  broadcastModeAndPage();
+// ── DECK / FILE MANAGEMENT ──────────────────────────────────
+
+function toggleDeckPanel(){document.getElementById('deck-panel-pres').classList.toggle('hidden')}
+function toggleDrawDeckPanel(){document.getElementById('draw-deck-panel').classList.toggle('show')}
+
+function renderDeckListPres(){
+  const el=document.getElementById('deck-list-pres');
+  if(!decks.length){el.innerHTML='<div class="deck-empty">No files loaded yet.</div>';return}
+  el.innerHTML=decks.map((d,i)=>`
+    <div class="deck-item${i===currentDeckIndex?' on':''}" onclick="switchDeck(${i})">
+      <div class="deck-item-icon">${d.type==='pdf'?'📄':'📊'}</div>
+      <div class="deck-item-info">
+        <div class="deck-item-name">${escHtml(d.name)}</div>
+        <div class="deck-item-sub">${d.totalPages} ${d.type==='pdf'?'pages':'slides'}</div>
+      </div>
+      <button class="deck-item-del" onclick="event.stopPropagation();removeDeck(${i})" title="Remove">✕</button>
+    </div>`).join('');
+  document.getElementById('deck-cur-name').textContent=decks[currentDeckIndex]?.name||'No file';
 }
-async function loadImages(input){
-  const files=Array.from(input.files);if(!files.length)return;
-  files.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+
+function renderDeckListDraw(decklist,curIdx){
+  const el=document.getElementById('draw-deck-list');
+  const sub=document.getElementById('draw-deck-sub');
+  if(!decklist||!decklist.length){el.innerHTML='<div class="deck-empty">No files loaded by presenter.</div>';return}
+  sub.textContent=`${decklist.length} file(s) available`;
+  el.innerHTML=decklist.map((d,i)=>`
+    <div class="draw-deck-item${i===curIdx?' on':''}" onclick="requestDeckSwitch(${i})">
+      <div style="font-size:18px">${d.type==='pdf'?'📄':'📊'}</div>
+      <div>
+        <div class="draw-deck-item-name">${escHtml(d.name)}</div>
+        <div class="draw-deck-item-sub">${d.totalPages} ${d.type==='pdf'?'pages':'slides'}</div>
+      </div>
+      ${i===curIdx?'<span style="font-size:11px;color:var(--lblue);margin-left:auto">▶ Current</span>':''}
+    </div>`).join('');
+}
+
+function removeDeck(i){
+  decks.splice(i,1);
+  if(!decks.length){currentDeckIndex=-1;pdfDoc=null;imgSlides=[];contentType='none';document.getElementById('upload-overlay').style.display='flex';document.getElementById('page-nav').style.display='none';}
+  else if(currentDeckIndex>=decks.length){switchDeck(decks.length-1);}
+  else{renderDeckListPres();}
+  sendDeckListToAll();
+}
+
+function sendDeckListToAll(){
+  const list=decks.map(d=>({name:d.name,type:d.type,totalPages:d.totalPages}));
+  const msg={type:'deck_list',decks:list,current:currentDeckIndex};
+  if(annotatorConn)annotatorConn.send(msg);
+}
+
+async function switchDeck(i){
+  if(i<0||i>=decks.length)return;
+  currentDeckIndex=i;
+  const deck=decks[i];
+  annotations={};currentPage=1;
+  if(deck.type==='pdf'){pdfDoc=deck.pdfDoc;imgSlides=[];contentType='pdf';totalPages=deck.totalPages;}
+  else{pdfDoc=null;imgSlides=deck.slides;contentType='images';totalPages=deck.totalPages;}
   document.getElementById('upload-overlay').style.display='none';
-  pdfDoc=null;contentType='images';
-  imgSlides=await Promise.all(files.map(f=>new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(f)})));
-  totalPages=imgSlides.length;currentPage=1;annotations={};
   document.getElementById('page-nav').style.display=totalPages>1?'flex':'none';
   await renderPresenterPage(currentPage);
-  broadcastModeAndPage();toast(`📊 ${totalPages} slides loaded!`);
+  renderDeckListPres();
+  broadcastModeAndPage();
+  sendDeckListToAll();
+  toast(`📁 Switched to: ${deck.name}`);
+  document.getElementById('deck-panel-pres').classList.add('hidden');
+}
+
+// PDF / IMAGE LOADING — now adds to decks
+async function addPDF(input){
+  const file=input.files[0];if(!file)return;input.value='';
+  toast('⏳ Loading '+file.name+'…');
+  const buf=await file.arrayBuffer();
+  const doc=await pdfjsLib.getDocument({data:buf}).promise;
+  const deck={name:file.name,type:'pdf',pdfDoc:doc,slides:[],totalPages:doc.numPages};
+  decks.push(deck);
+  await switchDeck(decks.length-1);
+}
+async function addImages(input){
+  const files=Array.from(input.files);if(!files.length)return;input.value='';
+  files.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+  const name=`PPT Slides (${files.length} slides)`;
+  toast('⏳ Loading '+files.length+' slides…');
+  const slides=await Promise.all(files.map(f=>new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(f)})));
+  const deck={name,type:'images',pdfDoc:null,slides,totalPages:files.length};
+  decks.push(deck);
+  await switchDeck(decks.length-1);
+  toast(`📊 ${files.length} slides loaded!`);
+}
+
+// Keep old handler names pointing to new functions
+function loadPDF(input){addPDF(input)}
+function loadImages(input){addImages(input)}
+
+// Annotator requests presenter to switch deck
+function requestDeckSwitch(i){
+  if(clientConn)clientConn.send({type:'deck_switch_request',index:i});
+  toggleDrawDeckPanel();
+  toast('📁 Switching file…');
 }
 function broadcastModeAndPage(){
   const msg={type:'mode_set',mode:'pdf'};
-  if(annotatorConn){annotatorConn.send(msg);sendPageToConn(annotatorConn)}
-  guestConns.forEach(c=>{c.send(msg);sendPageToConn(c,true)});
+  if(annotatorConn){annotatorConn.send(msg);sendPageToConn(annotatorConn,false)}
+  guestConns.forEach(c=>{c.send(msg);setTimeout(()=>sendLowResToGuest(c),200)});
 }
 
 const pdfCanvas=document.getElementById('pdf-canvas');
@@ -778,14 +931,44 @@ function strokeOnCanvas(ctx,s,W,H){
 async function changePage(delta){
   const next=currentPage+delta;if(next<1||next>totalPages)return;
   currentPage=next;await renderPresenterPage(currentPage);
-  if(annotatorConn)sendPageToConn(annotatorConn);
-  guestConns.forEach(c=>sendPageToConn(c,true));
+  if(annotatorConn)sendPageToConn(annotatorConn,false);
+  let gi=0;guestConns.forEach(c=>{setTimeout(()=>sendLowResToGuest(c),gi++*250)});
 }
 
-async function sendPageToConn(c,guestOnly=false){
+// Full quality → annotator
+async function sendPageToConn(c,isGuest=false){
   if(!c||c.open===false)return;
-  const d=pdfCanvas.toDataURL('image/jpeg',.82);
-  c.send({type:'page_image',page:currentPage,total:totalPages,dataURL:d,contentType,guestOnly});
+  if(isGuest){sendLowResToGuest(c);return;}
+  // Annotator gets full quality with annotations overlaid
+  const tmp=document.createElement('canvas');
+  tmp.width=pdfCanvas.width;tmp.height=pdfCanvas.height;
+  const ctx=tmp.getContext('2d');
+  ctx.drawImage(pdfCanvas,0,0);
+  ctx.drawImage(overlayCanvas,0,0);
+  c.send({type:'page_image',page:currentPage,total:totalPages,dataURL:tmp.toDataURL('image/jpeg',.82),contentType});
+}
+
+// Low-res compressed → guest (to prevent buffering)
+function sendLowResToGuest(c){
+  if(!c||c.open===false)return;
+  const maxW=720;
+  const scale=Math.min(1,maxW/Math.max(pdfCanvas.width,1));
+  const tmp=document.createElement('canvas');
+  tmp.width=Math.round(pdfCanvas.width*scale);
+  tmp.height=Math.round(pdfCanvas.height*scale);
+  const ctx=tmp.getContext('2d');
+  ctx.drawImage(pdfCanvas,0,0,tmp.width,tmp.height);
+  ctx.drawImage(overlayCanvas,0,0,tmp.width,tmp.height);
+  c.send({type:'page_image',page:currentPage,total:totalPages,dataURL:tmp.toDataURL('image/jpeg',.52),contentType});
+}
+
+// Throttled guest broadcast — max 1 update per 400ms
+let _guestThrottle=null;
+function scheduleGuestUpdate(){
+  clearTimeout(_guestThrottle);
+  _guestThrottle=setTimeout(()=>{
+    guestConns.forEach(c=>sendLowResToGuest(c));
+  },400);
 }
 
 // WHITEBOARD
@@ -800,17 +983,37 @@ function redrawWbPres(){
   const ctx=wc.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wc.width,wc.height);
   wbStrokes.forEach(s=>strokeOnCanvas(ctx,s,wc.width,wc.height));
 }
-function sendWbSnapshot(){if(annotatorConn)sendWbSnapshotToConn(annotatorConn);guestConns.forEach(c=>sendWbSnapshotToConn(c))}
-function sendWbSnapshotToConn(c){
+function sendWbSnapshot(){
+  if(annotatorConn)sendWbSnapshotToConn(annotatorConn,false);
+  guestConns.forEach(c=>sendWbSnapshotToConn(c,true));
+}
+
+let _wbThrottle=null;
+function sendWbSnapshotThrottled(){
+  if(annotatorConn)sendWbSnapshotToConn(annotatorConn,false);
+  clearTimeout(_wbThrottle);
+  _wbThrottle=setTimeout(()=>guestConns.forEach(c=>sendWbSnapshotToConn(c,true)),500);
+}
+
+function sendWbSnapshotToConn(c,lowRes=false){
   if(!c||c.open===false)return;
   const wc=document.getElementById('wb-canvas-pres');if(!wc.width)return;
-  c.send({type:'wb_snapshot',dataURL:wc.toDataURL('image/jpeg',.75)});
+  if(lowRes){
+    const maxW=720,scale=Math.min(1,maxW/wc.width);
+    const tmp=document.createElement('canvas');
+    tmp.width=Math.round(wc.width*scale);tmp.height=Math.round(wc.height*scale);
+    tmp.getContext('2d').drawImage(wc,0,0,tmp.width,tmp.height);
+    c.send({type:'wb_snapshot',dataURL:tmp.toDataURL('image/jpeg',.5)});
+  } else {
+    c.send({type:'wb_snapshot',dataURL:wc.toDataURL('image/jpeg',.78)});
+  }
 }
 
 // PRESENTER HANDLE ANNOTATOR DATA
 function handlePresenterDrawData(data){
   if(data.type==='request_mode'){switchPresMode(data.mode);return}
   if(data.type==='page_request'){changePage(data.delta);return}
+  if(data.type==='deck_switch_request'){switchDeck(data.index);return}
   if(presMode==='pdf'){
     if(!annotations[currentPage])annotations[currentPage]=[];
     const strokes=annotations[currentPage];
@@ -820,7 +1023,7 @@ function handlePresenterDrawData(data){
     else if(data.type==='clear_page'){annotations[data.page]=[];if(data.page===currentPage)redrawPdfAnnotations()}
     else if(data.type==='undo'){if(strokes.length){strokes.pop();redrawPdfAnnotations()}}
     // after redraw send snapshot to guests
-    if(['stroke_end','clear_page','undo'].includes(data.type)){guestConns.forEach(c=>sendPageToConn(c,true))}
+    if(['stroke_end','clear_page','undo'].includes(data.type)){scheduleGuestUpdate()}
   } else {
     const wc=document.getElementById('wb-canvas-pres');const ctx=wc.getContext('2d');
     if(data.type==='stroke_begin'){currentStroke={color:data.color,width:data.width,eraser:data.eraser,pts:[{x:data.x,y:data.y}]};wbStrokes.push(currentStroke)}
@@ -831,9 +1034,9 @@ function handlePresenterDrawData(data){
       ctx.lineWidth=currentStroke.width*Math.min(wc.width,wc.height)/100;ctx.lineCap='round';ctx.lineJoin='round';
       ctx.beginPath();ctx.moveTo(last.x*wc.width,last.y*wc.height);ctx.lineTo(p.x*wc.width,p.y*wc.height);ctx.stroke();ctx.restore();
     }
-    else if(data.type==='stroke_end'){currentStroke=null;sendWbSnapshot()}
+    else if(data.type==='stroke_end'){currentStroke=null;sendWbSnapshotThrottled()}
     else if(data.type==='wb_clear'){wbStrokes=[];redrawWbPres();guestConns.forEach(c=>c.send({type:'wb_clear'}))}
-    else if(data.type==='undo'){if(wbStrokes.length){wbStrokes.pop();redrawWbPres();sendWbSnapshot()}}
+    else if(data.type==='undo'){if(wbStrokes.length){wbStrokes.pop();redrawWbPres();sendWbSnapshotThrottled()}}
   }
 }
 function broadcastWbUpdate(){}
@@ -986,6 +1189,7 @@ function handleDrawerData(data){
   else if(data.type==='wb_clear'){const ctx=wbCanvasDraw.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wbCanvasDraw.width,wbCanvasDraw.height)}
   else if(data.type==='new_question'){questions.push(data.question);addQuestionToUI(data.question)}
   else if(data.type==='all_questions'){questions=data.questions;rebuildQAList()}
+  else if(data.type==='deck_list'){renderDeckListDraw(data.decks,data.current)}
   else if(data.type==='presenter_notify'){
     const bar=document.getElementById('draw-notif-bar');
     document.getElementById('draw-notif-text').textContent=data.text;
