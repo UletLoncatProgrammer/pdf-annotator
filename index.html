@@ -74,7 +74,7 @@
     #qr-panel .qr-hint{font-size:10px;color:var(--gray);text-align:center;margin-top:6px;line-height:1.5}
 
     /* Q&A PANEL (presenter + annotator) */
-    .qa-panel{position:absolute;top:0;right:-340px;width:320px;height:100%;background:var(--navy);border-left:1px solid var(--border);z-index:30;display:flex;flex-direction:column;transition:right .25s ease}
+    .qa-panel{position:absolute;top:0;right:-105%;width:min(340px,100%);height:100%;background:var(--navy);border-left:1px solid var(--border);z-index:30;display:flex;flex-direction:column;transition:right .25s ease}
     .qa-panel.open{right:0}
     .qa-header{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
     .qa-header-title{font-size:14px;font-weight:600;color:var(--white)}
@@ -166,6 +166,9 @@
     .pw-err.show{display:block}
     .pw-hint{font-size:11px;color:var(--gray);margin-top:12px;line-height:1.5;text-align:center}
     .pw-forgot{font-size:12px;color:var(--lblue);text-align:center;margin-top:10px;cursor:pointer;text-decoration:underline;display:block;background:none;border:none;width:100%}
+    /* Q&A backdrop on mobile */
+    .qa-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:29;display:none}
+    .qa-backdrop.show{display:block}
     .pw-forgot:hover{color:var(--white)}
     .pw-reveal-box{background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center;margin-bottom:12px}
     .pw-reveal-val{font-size:22px;font-weight:700;color:var(--lblue);letter-spacing:3px;word-break:break-all}
@@ -263,6 +266,8 @@
     <div class="qr-hint">Annotator → Join as Annotator<br>Guest → Join as Guest</div>
   </div>
 
+  <!-- Q&A backdrop -->
+  <div class="qa-backdrop" id="qa-backdrop-pres" onclick="toggleQA('pres')"></div>
   <!-- Q&A panel -->
   <div class="qa-panel" id="qa-panel-pres">
     <div class="qa-header">
@@ -280,8 +285,8 @@
     <span class="status-dot" id="draw-dot"></span>
     <span class="bar-title"  id="draw-status">Connecting…</span>
     <span id="draw-mode-badge" class="badge badge-gray">—</span>
-    <button class="icon-btn" id="qa-toggle-draw" onclick="toggleQA('draw')" title="Questions">
-      💬<span class="q-count" id="q-count-draw" style="display:none">0</span>
+    <button class="icon-btn" id="qa-toggle-draw" onclick="toggleQA('draw')" title="Questions" style="background:rgba(37,99,168,.4);border:1px solid var(--blue);border-radius:6px;padding:4px 8px;font-size:12px;gap:4px;display:flex;align-items:center">
+      💬 Q&amp;A<span class="q-count" id="q-count-draw" style="display:none">0</span>
     </button>
     <button class="icon-btn" onclick="undoStroke()"  title="Undo">↩</button>
     <button class="icon-btn" onclick="goFullscreen()" title="Fullscreen">⛶</button>
@@ -325,6 +330,8 @@
     <button class="tool-btn" onclick="clearCurrentPage()">🗑</button>
   </div>
 
+  <!-- Q&A backdrop -->
+  <div class="qa-backdrop" id="qa-backdrop-draw" onclick="toggleQA('draw')"></div>
   <!-- Q&A panel for annotator -->
   <div class="qa-panel" id="qa-panel-draw">
     <div class="qa-header">
@@ -547,11 +554,17 @@ function addQuestionToUI(q){
 
 function toggleQA(who){
   const panel=document.getElementById('qa-panel-'+who);
-  panel.classList.toggle('open');
-  if(panel.classList.contains('open')){
+  const backdrop=document.getElementById('qa-backdrop-'+who);
+  const isOpen=panel.classList.toggle('open');
+  if(backdrop)backdrop.classList.toggle('show',isOpen);
+  if(isOpen){
     unreadQ=0;
     ['pres','draw'].forEach(t=>{const el=document.getElementById('q-count-'+t);if(el)el.style.display='none'});
   }
+  // recalculate slide size after panel transition
+  setTimeout(()=>{
+    if(document.getElementById('drawer').classList.contains('active')&&drawerMode==='pdf'&&pageBg.src)resizeDrawCanvas();
+  },300);
 }
 
 function clearQuestions(){
@@ -826,7 +839,8 @@ function handleDrawerData(data){
   }
   else if(data.type==='page_image'){
     document.getElementById('draw-waiting').classList.add('hidden');
-    pageBg.onload=()=>resizeDrawCanvas();pageBg.src=data.dataURL;
+    pageBg.onload=()=>{requestAnimationFrame(()=>requestAnimationFrame(resizeDrawCanvas))};
+    pageBg.src=data.dataURL;
     document.getElementById('draw-pg-num').textContent=data.page;
     document.getElementById('draw-pg-total').textContent='/ '+(data.contentType==='images'?data.total+' slides':data.total+' pages');
     clearDrawCanvas();
@@ -849,10 +863,14 @@ function rebuildQAList(){
 
 function resizeDrawCanvas(){
   const wrap=document.getElementById('draw-wrap');
+  const rect=wrap.getBoundingClientRect();
+  const W=rect.width||wrap.offsetWidth||window.innerWidth;
+  const H=rect.height||wrap.offsetHeight||(window.innerHeight-220);
   const iW=pageBg.naturalWidth||800,iH=pageBg.naturalHeight||600;
-  const scale=Math.min(wrap.clientWidth/iW,wrap.clientHeight/iH)*0.97;
-  pageBg.style.width=Math.round(iW*scale)+'px';pageBg.style.height=Math.round(iH*scale)+'px';
-  drawCanvas.width=Math.round(iW*scale);drawCanvas.height=Math.round(iH*scale);
+  const scale=Math.min(W/iW,H/iH)*0.99;
+  const fw=Math.round(iW*scale),fh=Math.round(iH*scale);
+  pageBg.style.width=fw+'px';pageBg.style.height=fh+'px';
+  drawCanvas.width=fw;drawCanvas.height=fh;
 }
 function initWbDrawCanvas(){
   const wrap=document.getElementById('wb-draw-wrap');
@@ -918,7 +936,7 @@ window.addEventListener('resize',()=>{
     else if(presMode==='wb')initWbPresCanvas();
   }
   if(document.getElementById('drawer').classList.contains('active')){
-    if(drawerMode==='pdf'&&pageBg.src)resizeDrawCanvas();
+    if(drawerMode==='pdf'&&pageBg.src)requestAnimationFrame(resizeDrawCanvas);
     else if(drawerMode==='wb')initWbDrawCanvas();
   }
 });
