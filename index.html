@@ -165,6 +165,11 @@
     .pw-err{font-size:12px;color:var(--red);margin:-6px 0 10px;display:none}
     .pw-err.show{display:block}
     .pw-hint{font-size:11px;color:var(--gray);margin-top:12px;line-height:1.5;text-align:center}
+    .pw-forgot{font-size:12px;color:var(--lblue);text-align:center;margin-top:10px;cursor:pointer;text-decoration:underline;display:block;background:none;border:none;width:100%}
+    .pw-forgot:hover{color:var(--white)}
+    .pw-reveal-box{background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center;margin-bottom:12px}
+    .pw-reveal-val{font-size:22px;font-weight:700;color:var(--lblue);letter-spacing:3px;word-break:break-all}
+    .pw-reveal-label{font-size:11px;color:var(--gray);margin-bottom:6px}
     .pw-divider{display:flex;align-items:center;gap:8px;margin:12px 0}
     .pw-divider span{font-size:11px;color:var(--gray);white-space:nowrap}
     .pw-divider::before,.pw-divider::after{content:'';flex:1;height:1px;background:var(--border)}
@@ -219,6 +224,7 @@
       <button id="pill-wb"  onclick="switchPresMode('wb')">WB</button>
     </div>
     <button class="icon-btn" onclick="toggleQR()"          title="QR">📱</button>
+    <button class="icon-btn" onclick="showCurrentPassword()" title="Show Password">🔑</button>
     <button class="icon-btn" id="qa-toggle-pres" onclick="toggleQA('pres')" title="Questions">
       💬<span class="q-count" id="q-count-pres" style="display:none">0</span>
     </button>
@@ -336,7 +342,8 @@
     <span class="status-dot" id="guest-dot"></span>
     <span class="bar-title"  id="guest-status">Connecting…</span>
     <span id="guest-badge" class="badge badge-guest">Guest</span>
-    <span id="guest-pg-info" style="font-size:11px;color:var(--gray)"></span>
+    <span id="guest-pg-info" style="font-size:11px;color:var(--gray);flex:1"></span>
+    <button class="icon-btn" onclick="goHome()" title="Leave session" style="color:#EF4444">✕ Leave</button>
   </div>
   <div id="guest-view-wrap">
     <div class="guest-label">👁 View Only</div>
@@ -954,7 +961,7 @@ function openAnnotatorPw(){
   document.getElementById('pw-icon').textContent='📱';
   document.getElementById('pw-title').textContent='Join as Annotator';
   document.getElementById('pw-sub').textContent='Enter the room code and password provided by the presenter.';
-  document.getElementById('pw-hint').textContent='Contact the presenter if you don\'t have the password.';
+  document.getElementById('pw-hint').textContent='Leave password blank if the presenter did not set one.';
   body.innerHTML=`
     <label class="pw-label">ROOM CODE</label>
     <div class="pw-field">
@@ -968,18 +975,70 @@ function openAnnotatorPw(){
     <div class="pw-actions">
       <button class="btn btn-secondary" onclick="closePwModal()">Cancel</button>
       <button class="btn btn-primary" onclick="confirmAnnotatorPw()">🔗 Connect</button>
-    </div>`;
+    </div>
+    <button class="pw-forgot" onclick="requestPasswordByEmail()">🔑 Forgot password? Request via email</button>`;
   document.getElementById('pw-err').classList.remove('show');
-  document.getElementById('pw-hint').textContent='Leave password blank if the presenter did not set one.';
   document.getElementById('pw-overlay').classList.remove('hidden');
   setTimeout(()=>{const el=document.getElementById('pw-code');if(el)el.focus()},100);
-  // enter key
   setTimeout(()=>{
     const code=document.getElementById('pw-code');
     const pass=document.getElementById('pw-pass');
     if(code)code.addEventListener('keyup',e=>{if(e.key==='Enter')document.getElementById('pw-pass').focus()});
     if(pass)pass.addEventListener('keyup',e=>{if(e.key==='Enter')confirmAnnotatorPw()});
   },150);
+}
+
+// SHOW CURRENT PASSWORD (presenter only)
+function showCurrentPassword(){
+  const body=document.getElementById('pw-body');
+  document.getElementById('pw-icon').textContent='🔑';
+  document.getElementById('pw-title').textContent='Current Room Password';
+  document.getElementById('pw-sub').textContent='Share this password with your annotator.';
+  document.getElementById('pw-hint').textContent='';
+  const val=presPassword?presPassword:'(No password set — anyone can join as annotator)';
+  body.innerHTML=`
+    <div class="pw-reveal-box">
+      <div class="pw-reveal-label">ROOM PASSWORD</div>
+      <div class="pw-reveal-val" id="pw-reveal-val" style="${presPassword?'':'font-size:13px;color:var(--gray);letter-spacing:0'}">${val}</div>
+    </div>
+    ${presPassword?`<button class="pw-skip" onclick="copyPassword()">📋 Copy password</button>`:''}
+    <div class="pw-divider"><span>CHANGE PASSWORD</span></div>
+    <div class="pw-field">
+      <input class="pw-input" id="pw-new" type="password" placeholder="Enter new password (blank = remove)" maxlength="50">
+      <button class="pw-toggle" onclick="togglePwVis('pw-new')">👁</button>
+    </div>
+    <div class="pw-actions">
+      <button class="btn btn-secondary" onclick="closePwModal()">Close</button>
+      <button class="btn btn-primary" onclick="changePassword()">✅ Update Password</button>
+    </div>`;
+  document.getElementById('pw-err').classList.remove('show');
+  document.getElementById('pw-overlay').classList.remove('hidden');
+}
+
+function copyPassword(){
+  if(presPassword){navigator.clipboard.writeText(presPassword).then(()=>toast('📋 Password copied!'));}
+}
+
+function changePassword(){
+  const newPw=document.getElementById('pw-new').value;
+  if(newPw&&newPw.length<4){
+    const err=document.getElementById('pw-err');err.textContent='Min 4 characters.';err.classList.add('show');return;
+  }
+  presPassword=newPw;
+  closePwModal();
+  toast(newPw?'🔒 Password updated!':'🔓 Password removed — session is now open');
+}
+
+// REQUEST PASSWORD BY EMAIL (annotator — forgot pw)
+function requestPasswordByEmail(){
+  const code=document.getElementById('pw-code')?document.getElementById('pw-code').value.trim():'';
+  const roomInfo=code?`Room Code: ${code}`:'Room Code: (not entered yet)';
+  const subject=encodeURIComponent('Password Request — Live Annotator');
+  const body=encodeURIComponent(
+    `Hi Chrisanto,\n\nI need the password to join the Live Annotator session as an Annotator.\n\n${roomInfo}\n\nPlease share the password with me.\n\nThank you!`
+  );
+  window.open(`mailto:chrisanto.pangestu@gmail.com?subject=${subject}&body=${body}`,'_blank');
+  toast('📧 Opening email app…');
 }
 
 function confirmPresenterPw(){
