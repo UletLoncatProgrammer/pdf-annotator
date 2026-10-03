@@ -87,26 +87,47 @@
     .qa-empty{color:var(--gray);font-size:13px;text-align:center;padding:24px;line-height:1.6}
     .qa-clear-btn{margin:8px;padding:7px;font-size:12px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:var(--red);border-radius:6px;cursor:pointer;flex-shrink:0}
 
-    /* DRAWER (TABLET) */
-    #drawer{background:#111}
-    .slide-nav{display:flex;align-items:center;justify-content:center;background:rgba(11,30,61,.98);border-bottom:1px solid var(--border);flex-shrink:0}
+    /* DRAWER (TABLET) — portrait/landscape adaptive */
+    #drawer{background:#111;overflow:hidden}
+    .mode-bar{display:flex;flex-shrink:0;border-bottom:1px solid var(--border)}
+    .mode-bar-btn{flex:1;padding:7px 0;font-size:12px;font-weight:600;border:none;background:var(--card);color:var(--gray);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border-right:1px solid var(--border)}
+    .mode-bar-btn:last-child{border-right:none}
+    .mode-bar-btn.on{background:var(--blue);color:var(--white)}
+    .mode-bar-btn.on-wb{background:#1a3a1a;color:#4ade80}
+    .slide-nav{display:flex;align-items:center;background:rgba(11,30,61,.98);border-bottom:1px solid var(--border);flex-shrink:0}
     .slide-btn{flex:1;background:none;border:none;color:var(--white);cursor:pointer;font-size:26px;padding:9px 0;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--border)}
     .slide-btn:last-of-type{border-right:none}
     .slide-btn:active{background:rgba(255,255,255,.1)}
     .slide-info{flex:1.2;text-align:center;padding:9px 0;border-right:1px solid var(--border)}
     .slide-info .pg-num{font-size:17px;font-weight:700;color:var(--white)}
     .slide-info .pg-total{font-size:10px;color:var(--gray)}
-    .mode-bar{display:flex;flex-shrink:0;border-bottom:1px solid var(--border)}
-    .mode-bar-btn{flex:1;padding:7px 0;font-size:12px;font-weight:600;border:none;background:var(--card);color:var(--gray);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border-right:1px solid var(--border)}
-    .mode-bar-btn:last-child{border-right:none}
-    .mode-bar-btn.on{background:var(--blue);color:var(--white)}
-    .mode-bar-btn.on-wb{background:#1a3a1a;color:#4ade80}
-    #draw-wrap{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#111;touch-action:none}
+
+    /* Draw area — sized by JS to match slide aspect ratio */
+    #draw-wrap{flex-shrink:0;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#111;touch-action:none;width:100%}
     #page-bg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:block}
     #draw-canvas{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);touch-action:none;cursor:crosshair}
-    #wb-draw-wrap{flex:1;position:relative;overflow:hidden;display:none;align-items:center;justify-content:center;background:#fff;touch-action:none}
+    #wb-draw-wrap{flex-shrink:0;position:relative;overflow:hidden;display:none;align-items:center;justify-content:center;background:#fff;touch-action:none;width:100%}
     #wb-draw-wrap.on{display:flex}
     #wb-canvas-draw{display:block;touch-action:none;cursor:crosshair}
+
+    /* Bottom section: Q&A + notification fills remaining space */
+    #drawer-bottom{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;background:var(--navy)}
+
+    /* Q&A section */
+    .qa-bottom-head{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--card)}
+    .qa-bottom-title{font-size:13px;font-weight:600;color:var(--white);display:flex;align-items:center;gap:6px}
+    .qa-bottom-sub{font-size:11px;color:var(--gray)}
+    .qa-bottom-list{flex:1;overflow-y:auto;padding:6px 10px}
+
+    /* Presenter notification bar — private to annotator */
+    .notif-bar{background:linear-gradient(135deg,#0f3460,#1a3460);border-top:2px solid var(--blue);padding:9px 14px;flex-shrink:0;display:none;align-items:center;gap:10px}
+    .notif-bar.show{display:flex}
+    .notif-icon{font-size:18px;flex-shrink:0}
+    .notif-text{font-size:13px;color:var(--white);flex:1;line-height:1.4}
+    .notif-time{font-size:10px;color:var(--gray);flex-shrink:0}
+    .notif-dismiss{background:none;border:none;color:var(--gray);cursor:pointer;font-size:16px;flex-shrink:0;padding:2px}
+
+    /* Toolbar */
     .toolbar{display:flex;align-items:center;justify-content:center;padding:7px 8px;background:rgba(11,30,61,.98);border-top:1px solid var(--border);flex-shrink:0;gap:5px;flex-wrap:wrap}
     .color-btn{width:26px;height:26px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:transform .1s;flex-shrink:0}
     .color-btn.on{border-color:var(--white);transform:scale(1.22)}
@@ -115,6 +136,34 @@
     .size-btn{background:var(--card);border:1px solid var(--border);color:var(--white);border-radius:7px;padding:5px 8px;font-size:11px;cursor:pointer}
     .size-btn.on{background:var(--blue)}
     .tb-sep{width:1px;height:24px;background:var(--border);flex-shrink:0}
+
+    /* Landscape: side-by-side layout */
+    @media (orientation:landscape){
+      #drawer-main{display:flex;flex:1;flex-direction:row;overflow:hidden;min-height:0}
+      #drawer-left{display:flex;flex-direction:column;flex:1;overflow:hidden;min-width:0}
+      #drawer-bottom{width:260px;flex-shrink:0;border-left:1px solid var(--border);border-top:none}
+      #draw-wrap,#wb-draw-wrap{flex:1 !important;width:auto !important}
+    }
+    @media (orientation:portrait){
+      #drawer-main{display:flex;flex:1;flex-direction:column;overflow:hidden;min-height:0}
+      #drawer-left{display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+    }
+
+    /* Presenter announce modal */
+    .ann-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+    .ann-overlay.hidden{display:none}
+    .ann-box{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;width:100%;max-width:340px}
+    .ann-title{font-size:14px;font-weight:700;color:var(--white);margin-bottom:4px}
+    .ann-sub{font-size:12px;color:var(--gray);margin-bottom:14px;line-height:1.5}
+    .ann-input{width:100%;background:rgba(255,255,255,.07);border:1px solid var(--border);color:var(--white);padding:11px 14px;border-radius:8px;font-size:14px;outline:none;resize:none;-webkit-user-select:text;user-select:text;min-height:80px;font-family:inherit}
+    .ann-input:focus{border-color:var(--blue)}
+    .ann-actions{display:flex;gap:8px;margin-top:12px}
+    .ann-actions .btn{flex:1;padding:10px}
+
+    /* Guest announcement banner */
+    .guest-announce{position:absolute;top:54px;left:0;right:0;background:linear-gradient(135deg,#1a3460,#0f2a50);border-bottom:2px solid var(--blue);padding:10px 16px;display:none;align-items:center;gap:10px;z-index:15;animation:slideDown .3s ease}
+    .guest-announce.show{display:flex}
+    @keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}
 
     /* GUEST SCREEN */
     #guest{background:#000;position:relative}
@@ -226,8 +275,10 @@
       <button id="pill-pdf" onclick="switchPresMode('pdf')">PDF/PPT</button>
       <button id="pill-wb"  onclick="switchPresMode('wb')">WB</button>
     </div>
-    <button class="icon-btn" onclick="toggleQR()"          title="QR">📱</button>
-    <button class="icon-btn" onclick="showCurrentPassword()" title="Show Password">🔑</button>
+    <button class="icon-btn" onclick="toggleQR()"                  title="QR">📱</button>
+    <button class="icon-btn" onclick="showCurrentPassword()"       title="Show Password">🔑</button>
+    <button class="icon-btn" onclick="openAnnounce('annotator')"   title="Notify Annotator" style="font-size:13px">🔔 Ann</button>
+    <button class="icon-btn" onclick="openAnnounce('guests')"      title="Announce to Guests" style="font-size:13px">📢 Guests</button>
     <button class="icon-btn" id="qa-toggle-pres" onclick="toggleQA('pres')" title="Questions">
       💬<span class="q-count" id="q-count-pres" style="display:none">0</span>
     </button>
@@ -279,40 +330,86 @@
   </div>
 </div>
 
-<!-- DRAWER (ANNOTATOR) -->
+<!-- ANNOUNCE OVERLAY (Presenter → Annotator or Guests) -->
+<div class="ann-overlay hidden" id="ann-overlay">
+  <div class="ann-box">
+    <div class="ann-title" id="ann-title">📢 Notify Annotator</div>
+    <div class="ann-sub"  id="ann-sub">This message is private — only the annotator will see it.</div>
+    <textarea class="ann-input" id="ann-input" placeholder="Type your message…" maxlength="300"></textarea>
+    <div class="ann-actions">
+      <button class="btn btn-secondary" onclick="closeAnnounce()">Cancel</button>
+      <button class="btn btn-primary"   onclick="sendAnnounce()">📤 Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- DRAWER (ANNOTATOR) — portrait/landscape adaptive -->
 <div id="drawer" class="screen">
+
+  <!-- Top bar -->
   <div class="top-bar">
     <span class="status-dot" id="draw-dot"></span>
     <span class="bar-title"  id="draw-status">Connecting…</span>
     <span id="draw-mode-badge" class="badge badge-gray">—</span>
-    <button class="icon-btn" id="qa-toggle-draw" onclick="toggleQA('draw')" title="Questions" style="background:rgba(37,99,168,.4);border:1px solid var(--blue);border-radius:6px;padding:4px 8px;font-size:12px;gap:4px;display:flex;align-items:center">
-      💬 Q&amp;A<span class="q-count" id="q-count-draw" style="display:none">0</span>
-    </button>
     <button class="icon-btn" onclick="undoStroke()"  title="Undo">↩</button>
     <button class="icon-btn" onclick="goFullscreen()" title="Fullscreen">⛶</button>
-    <button class="icon-btn" onclick="goHome()"       title="Exit">✕</button>
+    <button class="icon-btn" onclick="goHome()"       title="Exit" style="color:#EF4444">✕</button>
   </div>
-  <div class="mode-bar">
-    <button class="mode-bar-btn on" id="mb-pdf" onclick="drawerRequestMode('pdf')">📄 PDF/PPT</button>
-    <button class="mode-bar-btn"    id="mb-wb"  onclick="drawerRequestMode('wb')">🟩 Whiteboard</button>
-  </div>
-  <div class="slide-nav" id="slide-nav">
-    <button class="slide-btn" onclick="requestPage(-1)">‹</button>
-    <div class="slide-info">
-      <div class="pg-num"   id="draw-pg-num">1</div>
-      <div class="pg-total" id="draw-pg-total">/ 1 slides</div>
-    </div>
-    <button class="slide-btn" onclick="requestPage(+1)">›</button>
-  </div>
-  <div id="draw-wrap">
-    <img id="page-bg" alt="">
-    <canvas id="draw-canvas"></canvas>
-    <div class="waiting" id="draw-waiting"><div class="spinner"></div><span>Waiting for presenter…</span></div>
-  </div>
-  <div id="wb-draw-wrap">
-    <div class="wb-label">Whiteboard</div>
-    <canvas id="wb-canvas-draw"></canvas>
-  </div>
+
+  <!-- Main adaptive area: portrait=column, landscape=row (via CSS) -->
+  <div id="drawer-main">
+
+    <!-- LEFT: mode bar + slide nav + slide canvas -->
+    <div id="drawer-left">
+      <div class="mode-bar">
+        <button class="mode-bar-btn on" id="mb-pdf" onclick="drawerRequestMode('pdf')">📄 PDF/PPT</button>
+        <button class="mode-bar-btn"    id="mb-wb"  onclick="drawerRequestMode('wb')">🟩 Whiteboard</button>
+      </div>
+      <div class="slide-nav" id="slide-nav">
+        <button class="slide-btn" onclick="requestPage(-1)">‹</button>
+        <div class="slide-info">
+          <div class="pg-num"   id="draw-pg-num">1</div>
+          <div class="pg-total" id="draw-pg-total">/ 1 slides</div>
+        </div>
+        <button class="slide-btn" onclick="requestPage(+1)">›</button>
+      </div>
+      <div id="draw-wrap">
+        <img id="page-bg" alt="">
+        <canvas id="draw-canvas"></canvas>
+        <div class="waiting" id="draw-waiting"><div class="spinner"></div><span>Waiting for presenter…</span></div>
+      </div>
+      <div id="wb-draw-wrap">
+        <div class="wb-label">Whiteboard</div>
+        <canvas id="wb-canvas-draw"></canvas>
+      </div>
+    </div><!-- /drawer-left -->
+
+    <!-- RIGHT/BOTTOM: Q&A + notification -->
+    <div id="drawer-bottom">
+      <!-- Q&A header -->
+      <div class="qa-bottom-head">
+        <div>
+          <div class="qa-bottom-title">💬 Guest Questions <span class="q-count" id="q-count-draw" style="display:none;position:static;background:var(--red);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:4px">0</span></div>
+          <div class="qa-bottom-sub" id="draw-q-sub">No questions yet</div>
+        </div>
+        <button class="tool-btn" onclick="clearQuestions()" style="font-size:11px;padding:4px 8px">🗑 Clear</button>
+      </div>
+      <!-- Q&A list -->
+      <div class="qa-bottom-list" id="qa-list-draw">
+        <div class="qa-empty">No questions yet.<br>Guests will appear here.</div>
+      </div>
+      <!-- Presenter notification (private, only annotator sees) -->
+      <div class="notif-bar" id="draw-notif-bar">
+        <div class="notif-icon">🔔</div>
+        <div class="notif-text" id="draw-notif-text"></div>
+        <div class="notif-time" id="draw-notif-time"></div>
+        <button class="notif-dismiss" onclick="dismissNotif()">✕</button>
+      </div>
+    </div><!-- /drawer-bottom -->
+
+  </div><!-- /drawer-main -->
+
+  <!-- Toolbar always at bottom -->
   <div class="toolbar">
     <div class="color-btn on" data-color="#EF4444" style="background:#EF4444" onclick="setColor(this)"></div>
     <div class="color-btn"    data-color="#3B82F6" style="background:#3B82F6" onclick="setColor(this)"></div>
@@ -330,18 +427,7 @@
     <button class="tool-btn" onclick="clearCurrentPage()">🗑</button>
   </div>
 
-  <!-- Q&A backdrop -->
-  <div class="qa-backdrop" id="qa-backdrop-draw" onclick="toggleQA('draw')"></div>
-  <!-- Q&A panel for annotator -->
-  <div class="qa-panel" id="qa-panel-draw">
-    <div class="qa-header">
-      <div><div class="qa-header-title">💬 Guest Questions</div><div class="qa-header-sub" id="draw-q-sub">No questions yet</div></div>
-      <button class="icon-btn" onclick="toggleQA('draw')">✕</button>
-    </div>
-    <div class="qa-list" id="qa-list-draw"><div class="qa-empty">No questions yet.</div></div>
-    <button class="qa-clear-btn" onclick="clearQuestions()">🗑 Clear all</button>
-  </div>
-</div>
+</div><!-- /drawer -->
 
 <!-- GUEST SCREEN -->
 <div id="guest" class="screen">
@@ -352,6 +438,16 @@
     <span id="guest-pg-info" style="font-size:11px;color:var(--gray);flex:1"></span>
     <button class="icon-btn" onclick="goHome()" title="Leave session" style="color:#EF4444">✕ Leave</button>
   </div>
+  <!-- Announcement from presenter to guests -->
+  <div class="guest-announce" id="guest-announce">
+    <div style="font-size:20px">📢</div>
+    <div style="flex:1">
+      <div style="font-size:11px;color:var(--lblue);font-weight:600;margin-bottom:2px">MESSAGE FROM PRESENTER</div>
+      <div style="font-size:14px;color:var(--white);line-height:1.4" id="guest-announce-text"></div>
+    </div>
+    <button onclick="document.getElementById('guest-announce').classList.remove('show')" style="background:none;border:none;color:var(--gray);font-size:18px;cursor:pointer;flex-shrink:0">✕</button>
+  </div>
+
   <div id="guest-view-wrap">
     <div class="guest-label">👁 View Only</div>
     <canvas id="guest-canvas"></canvas>
@@ -553,19 +649,51 @@ function addQuestionToUI(q){
 }
 
 function toggleQA(who){
-  const panel=document.getElementById('qa-panel-'+who);
-  const backdrop=document.getElementById('qa-backdrop-'+who);
-  const isOpen=panel.classList.toggle('open');
-  if(backdrop)backdrop.classList.toggle('show',isOpen);
-  if(isOpen){
+  // Presenter still uses slide-in panel; drawer uses always-visible bottom section
+  if(who==='pres'){
+    const panel=document.getElementById('qa-panel-pres');
+    const backdrop=document.getElementById('qa-backdrop-pres');
+    const isOpen=panel.classList.toggle('open');
+    if(backdrop)backdrop.classList.toggle('show',isOpen);
+    if(isOpen){unreadQ=0;const el=document.getElementById('q-count-pres');if(el)el.style.display='none'}
+  } else {
+    // For drawer, Q&A is always visible in bottom section — just reset badge
     unreadQ=0;
-    ['pres','draw'].forEach(t=>{const el=document.getElementById('q-count-'+t);if(el)el.style.display='none'});
+    const el=document.getElementById('q-count-draw');if(el)el.style.display='none';
   }
-  // recalculate slide size after panel transition
-  setTimeout(()=>{
-    if(document.getElementById('drawer').classList.contains('active')&&drawerMode==='pdf'&&pageBg.src)resizeDrawCanvas();
-  },300);
 }
+
+// ── ANNOUNCE SYSTEM ──────────────────────────────────────────
+let annTarget=''; // 'annotator' | 'guests'
+
+function openAnnounce(target){
+  annTarget=target;
+  document.getElementById('ann-title').textContent=target==='annotator'?'🔔 Notify Annotator':'📢 Announce to Guests';
+  document.getElementById('ann-sub').textContent=target==='annotator'
+    ?'Private message — only the annotator will see this.'
+    :'Public announcement — all guests will see this.';
+  document.getElementById('ann-input').value='';
+  document.getElementById('ann-overlay').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('ann-input').focus(),100);
+}
+
+function closeAnnounce(){document.getElementById('ann-overlay').classList.add('hidden')}
+
+function sendAnnounce(){
+  const text=document.getElementById('ann-input').value.trim();
+  if(!text){toast('Type a message first');return}
+  const time=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  if(annTarget==='annotator'){
+    if(annotatorConn)annotatorConn.send({type:'presenter_notify',text,time});
+    toast('🔔 Notification sent to annotator');
+  } else {
+    guestConns.forEach(c=>c.send({type:'guest_announce',text,time}));
+    toast('📢 Announcement sent to '+guestConns.size+' guest(s)');
+  }
+  closeAnnounce();
+}
+
+function dismissNotif(){document.getElementById('draw-notif-bar').classList.remove('show')}
 
 function clearQuestions(){
   questions=[];
@@ -798,6 +926,14 @@ function startGuest(code){
         const wc=document.getElementById('guest-wb-canvas');
         const ctx=wc.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wc.width,wc.height);
       }
+      else if(d.type==='guest_announce'){
+        const banner=document.getElementById('guest-announce');
+        document.getElementById('guest-announce-text').textContent=d.text;
+        banner.classList.add('show');
+        // auto-hide after 12 seconds
+        clearTimeout(window._gaBannerTimer);
+        window._gaBannerTimer=setTimeout(()=>banner.classList.remove('show'),12000);
+      }
     });
     clientConn.on('close',()=>{document.getElementById('guest-dot').className='status-dot';document.getElementById('guest-status').textContent='Disconnected';toast('Disconnected')});
     clientConn.on('error',()=>toast('⚠️ Cannot reach room '+code));
@@ -839,7 +975,7 @@ function handleDrawerData(data){
   }
   else if(data.type==='page_image'){
     document.getElementById('draw-waiting').classList.add('hidden');
-    pageBg.onload=()=>{requestAnimationFrame(()=>requestAnimationFrame(resizeDrawCanvas))};
+    pageBg.onload=()=>{requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(resizeDrawCanvas)))};
     pageBg.src=data.dataURL;
     document.getElementById('draw-pg-num').textContent=data.page;
     document.getElementById('draw-pg-total').textContent='/ '+(data.contentType==='images'?data.total+' slides':data.total+' pages');
@@ -850,6 +986,13 @@ function handleDrawerData(data){
   else if(data.type==='wb_clear'){const ctx=wbCanvasDraw.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wbCanvasDraw.width,wbCanvasDraw.height)}
   else if(data.type==='new_question'){questions.push(data.question);addQuestionToUI(data.question)}
   else if(data.type==='all_questions'){questions=data.questions;rebuildQAList()}
+  else if(data.type==='presenter_notify'){
+    const bar=document.getElementById('draw-notif-bar');
+    document.getElementById('draw-notif-text').textContent=data.text;
+    document.getElementById('draw-notif-time').textContent=data.time||'';
+    bar.classList.add('show');
+    toast('🔔 Message from presenter');
+  }
 }
 
 function rebuildQAList(){
@@ -863,19 +1006,44 @@ function rebuildQAList(){
 
 function resizeDrawCanvas(){
   const wrap=document.getElementById('draw-wrap');
-  const rect=wrap.getBoundingClientRect();
-  const W=rect.width||wrap.offsetWidth||window.innerWidth;
-  const H=rect.height||wrap.offsetHeight||(window.innerHeight-220);
+  const left=document.getElementById('drawer-left');
+  const isLandscape=window.innerWidth>window.innerHeight;
   const iW=pageBg.naturalWidth||800,iH=pageBg.naturalHeight||600;
-  const scale=Math.min(W/iW,H/iH)*0.99;
-  const fw=Math.round(iW*scale),fh=Math.round(iH*scale);
-  pageBg.style.width=fw+'px';pageBg.style.height=fh+'px';
-  drawCanvas.width=fw;drawCanvas.height=fh;
+  const aspect=iH/iW; // height per unit width
+
+  if(isLandscape){
+    // Landscape: fill the entire left panel height
+    const availW=left?left.getBoundingClientRect().width:window.innerWidth*0.65;
+    const topBarsH=(document.querySelector('#drawer .top-bar')||{offsetHeight:42}).offsetHeight
+                  +(document.getElementById('mode-bar-row')||{offsetHeight:0}).offsetHeight;
+    const slideNavH=(document.getElementById('slide-nav')||{offsetHeight:40}).offsetHeight;
+    const toolbarH=(document.querySelector('#drawer .toolbar')||{offsetHeight:52}).offsetHeight;
+    const availH=window.innerHeight-topBarsH-slideNavH-toolbarH-4;
+    const scale=Math.min(availW/iW, availH/iH)*0.99;
+    const fw=Math.round(iW*scale),fh=Math.round(iH*scale);
+    wrap.style.height=fh+'px';
+    pageBg.style.width=fw+'px';pageBg.style.height=fh+'px';
+    drawCanvas.width=fw;drawCanvas.height=fh;
+  } else {
+    // Portrait: slide fills full width, height from aspect ratio
+    const availW=window.innerWidth;
+    const fw=availW;
+    const fh=Math.round(availW*aspect);
+    wrap.style.height=fh+'px';
+    pageBg.style.width=fw+'px';pageBg.style.height=fh+'px';
+    drawCanvas.width=fw;drawCanvas.height=fh;
+  }
 }
 function initWbDrawCanvas(){
+  const isLandscape=window.innerWidth>window.innerHeight;
+  const left=document.getElementById('drawer-left');
+  const W=left?left.getBoundingClientRect().width||window.innerWidth:window.innerWidth;
+  const toolbarH=52,topH=42,modeH=38,slideNavH=0; // slideNav hidden in WB mode
+  const H=isLandscape?(window.innerHeight-topH-toolbarH-4):(window.innerHeight*0.62);
+  wbCanvasDraw.width=Math.round(W);
+  wbCanvasDraw.height=Math.round(H);
   const wrap=document.getElementById('wb-draw-wrap');
-  wbCanvasDraw.width=wrap.clientWidth||window.innerWidth;
-  wbCanvasDraw.height=wrap.clientHeight||(window.innerHeight-200);
+  wrap.style.height=Math.round(H)+'px';
   const ctx=wbCanvasDraw.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wbCanvasDraw.width,wbCanvasDraw.height);
 }
 
@@ -936,8 +1104,10 @@ window.addEventListener('resize',()=>{
     else if(presMode==='wb')initWbPresCanvas();
   }
   if(document.getElementById('drawer').classList.contains('active')){
-    if(drawerMode==='pdf'&&pageBg.src)requestAnimationFrame(resizeDrawCanvas);
-    else if(drawerMode==='wb')initWbDrawCanvas();
+    requestAnimationFrame(()=>{
+      if(drawerMode==='pdf'&&pageBg.src)resizeDrawCanvas();
+      else if(drawerMode==='wb')initWbDrawCanvas();
+    });
   }
 });
 
