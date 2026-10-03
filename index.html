@@ -87,8 +87,8 @@
     .qa-empty{color:var(--gray);font-size:13px;text-align:center;padding:24px;line-height:1.6}
     .qa-clear-btn{margin:8px;padding:7px;font-size:12px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:var(--red);border-radius:6px;cursor:pointer;flex-shrink:0}
 
-    /* DRAWER (TABLET) — portrait/landscape adaptive */
-    #drawer{background:#111;overflow:hidden}
+    /* DRAWER (ANNOTATOR) — adaptive layout */
+    #drawer{background:#111;overflow:hidden;position:relative}
     .mode-bar{display:flex;flex-shrink:0;border-bottom:1px solid var(--border)}
     .mode-bar-btn{flex:1;padding:7px 0;font-size:12px;font-weight:600;border:none;background:var(--card);color:var(--gray);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border-right:1px solid var(--border)}
     .mode-bar-btn:last-child{border-right:none}
@@ -102,56 +102,66 @@
     .slide-info .pg-num{font-size:17px;font-weight:700;color:var(--white)}
     .slide-info .pg-total{font-size:10px;color:var(--gray)}
 
-    /* Draw area — sized by JS to match slide aspect ratio */
-    #draw-wrap{flex-shrink:0;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#111;touch-action:none;width:100%}
-    #page-bg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:block}
-    #draw-canvas{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);touch-action:none;cursor:crosshair}
-    #wb-draw-wrap{flex-shrink:0;position:relative;overflow:hidden;display:none;align-items:center;justify-content:center;background:#fff;touch-action:none;width:100%}
+    /* main area: portrait = column (slide on top, panels fill the rest), landscape = row */
+    #drawer-main{display:flex;flex:1 1 0;min-height:0;overflow:hidden}
+    #drawer-left{display:flex;flex-direction:column;flex:0 0 auto;min-width:0;min-height:0}
+    #drawer-bottom{display:flex;flex-direction:column;flex:1 1 0;min-width:0;min-height:0;background:var(--navy);overflow:hidden}
+    .area{position:relative;overflow:auto;display:flex;width:100%;flex:0 0 auto;aspect-ratio:16/9;background:#111;touch-action:none}
+    #wb-draw-wrap{display:none}
     #wb-draw-wrap.on{display:flex}
-    #wb-canvas-draw{display:block;touch-action:none;cursor:crosshair}
+    .stage{position:relative;margin:auto;flex:0 0 auto}
+    #wb-stage{background:#fff}
+    #page-bg{position:absolute;left:0;top:0;width:100%;height:100%;display:block;pointer-events:none}
+    #draw-canvas,#wb-canvas-draw{position:absolute;left:0;top:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+    @media (orientation:portrait){ #drawer-main{flex-direction:column} }
+    @media (orientation:landscape){
+      #drawer-main{flex-direction:row}
+      #drawer-left{flex:1 1 0 !important}
+      #drawer-bottom{flex:0 0 23.5% !important;max-width:340px;min-width:190px;border-left:1px solid var(--border)}
+      .area{flex:1 1 0 !important;height:auto !important;aspect-ratio:auto !important}
+      .notif-bubble{font-size:13px;margin:6px 8px;padding:8px 11px}
+    }
+    #drawer.focus #drawer-bottom{display:none}
+    #drawer.focus #drawer-left{flex:1 1 0 !important}
+    #drawer.focus .area{flex:1 1 0 !important;height:auto !important;aspect-ratio:auto !important}
+    #drawer.pan .area,#drawer.pan #draw-canvas,#drawer.pan #wb-canvas-draw{touch-action:pan-x pan-y}
+    #drawer.pan #draw-canvas,#drawer.pan #wb-canvas-draw{cursor:grab}
 
-    /* Bottom section: Q&A + notification fills remaining space */
-    #drawer-bottom{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;background:var(--navy)}
-
-    /* Q&A section */
+    /* bottom panels: Q&A + presenter messages, always fill the space (no blank area) */
+    .qa-section{flex:1.15 1 0;min-height:0;display:flex;flex-direction:column;border-bottom:2px solid var(--blue)}
     .qa-bottom-head{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--card)}
     .qa-bottom-title{font-size:13px;font-weight:600;color:var(--white);display:flex;align-items:center;gap:6px}
     .qa-bottom-sub{font-size:11px;color:var(--gray)}
-    .qa-bottom-list{flex:1;overflow-y:auto;padding:6px 10px}
+    .qa-bottom-list{flex:1;overflow-y:auto;padding:6px 10px;min-height:0}
+    .notif-section{flex:1 1 0;min-height:0;display:flex;flex-direction:column;background:#0d2747}
+    .notif-head{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:#12345c;border-bottom:1px solid var(--border);flex-shrink:0;font-size:13px;font-weight:600}
+    .notif-list{flex:1;overflow-y:auto;padding:4px 0;min-height:0}
+    .notif-empty{color:var(--gray);font-size:13px;text-align:center;padding:18px 14px;line-height:1.5}
+    .notif-bubble{background:#17406f;border:1px solid var(--blue);border-radius:14px 14px 14px 4px;padding:10px 14px;margin:8px 10px;font-size:15px;line-height:1.45;color:#fff;-webkit-user-select:text;user-select:text}
+    .notif-bubble.new{box-shadow:0 0 0 2px var(--yellow)}
+    .notif-bubble .nt{display:block;font-size:10px;color:#9fc3ee;margin-top:5px}
 
-    /* Presenter notification bar — private to annotator */
-    .notif-bar{background:linear-gradient(135deg,#0f3460,#1a3460);border-top:2px solid var(--blue);padding:9px 14px;flex-shrink:0;display:none;align-items:center;gap:10px}
-    .notif-bar.show{display:flex}
-    .notif-icon{font-size:18px;flex-shrink:0}
-    .notif-text{font-size:13px;color:var(--white);flex:1;line-height:1.4}
-    .notif-time{font-size:10px;color:var(--gray);flex-shrink:0}
-    .notif-dismiss{background:none;border:none;color:var(--gray);cursor:pointer;font-size:16px;flex-shrink:0;padding:2px}
-
-    /* Toolbar */
+    /* toolbar */
     .toolbar{display:flex;align-items:center;justify-content:center;padding:7px 8px;background:rgba(11,30,61,.98);border-top:1px solid var(--border);flex-shrink:0;gap:5px;flex-wrap:wrap}
     .color-btn{width:26px;height:26px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:transform .1s;flex-shrink:0}
     .color-btn.on{border-color:var(--white);transform:scale(1.22)}
-    .tool-btn{background:var(--card);border:1px solid var(--border);color:var(--white);border-radius:7px;padding:5px 9px;font-size:12px;cursor:pointer}
+    .tool-btn{background:var(--card);border:1px solid var(--border);color:var(--white);border-radius:7px;padding:5px 9px;font-size:12px;cursor:pointer;position:relative;white-space:nowrap}
     .tool-btn.on{background:var(--blue);border-color:var(--blue)}
     .size-btn{background:var(--card);border:1px solid var(--border);color:var(--white);border-radius:7px;padding:5px 8px;font-size:11px;cursor:pointer}
     .size-btn.on{background:var(--blue)}
     .tb-sep{width:1px;height:24px;background:var(--border);flex-shrink:0}
+    .zoom-lbl{font-size:12px;color:var(--lblue);min-width:26px;text-align:center;font-weight:600}
 
-    /* Landscape: side-by-side layout */
-    @media (orientation:landscape){
-      #drawer-main{display:flex;flex:1;flex-direction:row;overflow:hidden;min-height:0}
-      #drawer-left{display:flex;flex-direction:column;flex:1;overflow:hidden;min-width:0}
-      #drawer-bottom{width:min(190px,28vw);flex-shrink:0;border-left:1px solid var(--border);border-top:none;font-size:12px}
-      #draw-wrap,#wb-draw-wrap{flex:1 !important;width:auto !important}
-      .qa-bottom-head{padding:5px 10px}
-      .qa-bottom-title{font-size:12px}
-      .notif-text{font-size:12px}
-    }
-    @media (orientation:portrait){
-      #drawer-main{display:flex;flex:1;flex-direction:column;overflow:hidden;min-height:0}
-      #drawer-left{display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
-      #drawer-bottom{max-height:min(38vh,280px);flex-shrink:0}
-    }
+    /* join diagnostics overlay */
+    .join-diag{position:fixed;inset:0;background:rgba(8,16,34,.97);z-index:180;display:flex;align-items:center;justify-content:center;padding:20px}
+    .join-diag.hidden{display:none}
+    .jd-box{width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:12px}
+    .jd-title{font-size:16px;font-weight:700;text-align:center}
+    .jd-reason{font-size:13px;color:#fff;text-align:center;line-height:1.55}
+    .jd-log{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:11.5px;line-height:1.65;color:var(--gray);max-height:190px;overflow-y:auto;font-family:ui-monospace,Menlo,Consolas,monospace;-webkit-user-select:text;user-select:text}
+    .jd-log .ok{color:#4ade80}.jd-log .warn{color:#fbbf24}.jd-log .bad{color:#f87171}
+    .jd-actions{display:flex;gap:8px;width:100%}
+    .jd-actions .btn{flex:1}
 
     /* Presenter announce modal */
     .ann-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -319,7 +329,8 @@
   <div id="join-section">
     <div class="join-form">
       <input id="room-input" type="text" placeholder="Enter 6-digit room code" maxlength="6" inputmode="numeric">
-      <button class="btn btn-primary"   onclick="confirmJoin()">🔗 &nbsp;Connect as Guest</button>
+      <button class="btn btn-primary" id="join-main-btn" onclick="confirmJoin()">🔗 &nbsp;Connect as Guest</button>
+      <button class="btn btn-secondary" id="join-ann-btn" style="display:none" onclick="joinAsAnnotatorFromHash()">✏️ &nbsp;Join as Annotator</button>
       <button class="btn btn-secondary" onclick="hideJoinForm()">✕ &nbsp;Cancel</button>
     </div>
   </div>
@@ -457,10 +468,8 @@
     </div>
   </div>
 
-  <!-- Main adaptive area: portrait=column, landscape=row (via CSS) -->
+  <!-- Main adaptive area: portrait = column, landscape = row (via CSS) -->
   <div id="drawer-main">
-
-    <!-- LEFT: mode bar + slide nav + slide canvas -->
     <div id="drawer-left">
       <div class="mode-bar">
         <button class="mode-bar-btn on" id="mb-pdf" onclick="drawerRequestMode('pdf')">📄 PDF/PPT</button>
@@ -474,43 +483,39 @@
         </div>
         <button class="slide-btn" onclick="requestPage(+1)">›</button>
       </div>
-      <div id="draw-wrap">
-        <img id="page-bg" alt="">
-        <canvas id="draw-canvas"></canvas>
-        <div class="waiting" id="draw-waiting"><div class="spinner"></div><span>Waiting for presenter…</span></div>
+      <div class="area" id="draw-wrap">
+        <div class="stage" id="draw-stage">
+          <img id="page-bg" alt="">
+          <canvas id="draw-canvas"></canvas>
+        </div>
+        <div class="waiting" id="draw-waiting"><div class="spinner"></div><span id="draw-waiting-txt">Waiting for presenter…</span></div>
       </div>
-      <div id="wb-draw-wrap">
+      <div class="area" id="wb-draw-wrap">
         <div class="wb-label">Whiteboard</div>
-        <canvas id="wb-canvas-draw"></canvas>
+        <div class="stage" id="wb-stage"><canvas id="wb-canvas-draw"></canvas></div>
       </div>
     </div><!-- /drawer-left -->
 
-    <!-- RIGHT/BOTTOM: Q&A + notification -->
     <div id="drawer-bottom">
-      <!-- Q&A header -->
-      <div class="qa-bottom-head">
-        <div>
-          <div class="qa-bottom-title">💬 Guest Questions <span class="q-count" id="q-count-draw" style="display:none;position:static;background:var(--red);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:4px">0</span></div>
-          <div class="qa-bottom-sub" id="draw-q-sub">No questions yet</div>
+      <div class="qa-section">
+        <div class="qa-bottom-head">
+          <div>
+            <div class="qa-bottom-title">💬 Guest Questions <span class="q-count" id="q-count-draw" style="display:none;position:static;background:var(--red);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:4px">0</span></div>
+            <div class="qa-bottom-sub" id="draw-q-sub">No questions yet</div>
+          </div>
+          <button class="tool-btn" onclick="clearQuestions()" style="font-size:11px;padding:4px 8px">🗑 Clear</button>
         </div>
-        <button class="tool-btn" onclick="clearQuestions()" style="font-size:11px;padding:4px 8px">🗑 Clear</button>
+        <div class="qa-bottom-list" id="qa-list-draw">
+          <div class="qa-empty">No questions yet.<br>Guests will appear here.</div>
+        </div>
       </div>
-      <!-- Q&A list -->
-      <div class="qa-bottom-list" id="qa-list-draw">
-        <div class="qa-empty">No questions yet.<br>Guests will appear here.</div>
-      </div>
-      <!-- Presenter notification (private, only annotator sees) -->
-      <div class="notif-bar" id="draw-notif-bar">
-        <div class="notif-icon">🔔</div>
-        <div class="notif-text" id="draw-notif-text"></div>
-        <div class="notif-time" id="draw-notif-time"></div>
-        <button class="notif-dismiss" onclick="dismissNotif()">✕</button>
+      <div class="notif-section">
+        <div class="notif-head"><span>🔔 Messages from presenter</span><button class="tool-btn" onclick="clearNotifs()" style="font-size:11px;padding:3px 8px">Clear</button></div>
+        <div class="notif-list" id="notif-list"><div class="notif-empty">No messages yet.<br>Notes from the presenter will appear here.</div></div>
       </div>
     </div><!-- /drawer-bottom -->
-
   </div><!-- /drawer-main -->
 
-  <!-- Toolbar always at bottom -->
   <div class="toolbar">
     <div class="color-btn on" data-color="#EF4444" style="background:#EF4444" onclick="setColor(this)"></div>
     <div class="color-btn"    data-color="#3B82F6" style="background:#3B82F6" onclick="setColor(this)"></div>
@@ -526,6 +531,12 @@
     <div class="tb-sep"></div>
     <button class="tool-btn" id="eraser-btn" onclick="toggleEraser()">⌫</button>
     <button class="tool-btn" onclick="clearCurrentPage()">🗑</button>
+    <div class="tb-sep"></div>
+    <button class="tool-btn" onclick="zoomBy(-1)" title="Zoom out">🔍−</button>
+    <span class="zoom-lbl" id="zoom-lbl">1×</span>
+    <button class="tool-btn" onclick="zoomBy(1)" title="Zoom in">🔍+</button>
+    <button class="tool-btn" id="pan-btn" onclick="togglePan()" title="Move around a zoomed slide">✋</button>
+    <button class="tool-btn" id="focus-btn" onclick="toggleFocus()" title="Focus: hide Q&amp;A and messages for a bigger drawing area">⤢ Focus<span class="q-count" id="focus-badge" style="display:none">0</span></button>
   </div>
 
 </div><!-- /drawer -->
@@ -554,7 +565,7 @@
     <canvas id="guest-canvas"></canvas>
     <div class="guest-waiting" id="guest-waiting">
       <div class="spinner"></div>
-      <span>Waiting for presenter to start…</span>
+      <span id="guest-wait-txt">Waiting for presenter to start…</span>
       <button id="guest-refresh-btn" onclick="guestRequestRefresh()" style="display:none;margin-top:12px;background:var(--blue);border:none;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">🔄 Tap to Refresh Slide</button>
       <span style="font-size:11px;color:var(--gray);margin-top:8px" id="guest-hint-txt"></span>
     </div>
@@ -574,6 +585,20 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- JOIN DIAGNOSTICS (annotator + guest) -->
+<div class="join-diag hidden" id="join-diag">
+  <div class="jd-box">
+    <div class="spinner" id="jd-spin"></div>
+    <div class="jd-title" id="jd-title">Connecting…</div>
+    <div class="jd-reason" id="jd-reason"></div>
+    <div class="jd-log" id="jd-log"></div>
+    <div class="jd-actions" id="jd-actions" style="display:none">
+      <button class="btn btn-primary" onclick="rejoinRoom()">🔄 Try again</button>
+      <button class="btn btn-secondary" onclick="goHome()">← Back</button>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
@@ -609,7 +634,7 @@ let unreadQ=0;
 
 // SCREENS
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
-function goHome(){
+function goHome(){resetClientUI();
   if(annotatorConn){try{annotatorConn.close()}catch(e){}annotatorConn=null}
   guestConns.forEach(c=>{try{c.close()}catch(e){}});guestConns.clear();guestCounter=0;
   if(presenterPeer){try{presenterPeer.destroy()}catch(e){}presenterPeer=null}
@@ -669,7 +694,7 @@ function startPresenter(mode){
   presMode=mode;showScreen('presenter');switchPresMode(mode);
   const code=Math.floor(100000+Math.random()*900000).toString();
   document.getElementById('room-code-display').textContent=code;
-  presenterPeer=new Peer(code,{host:'0.peerjs.com',port:443,secure:true,path:'/'});
+  presenterPeer=new Peer(code,PEER_OPTS);
   presenterPeer.on('error',err=>{if(err.type==='unavailable-id')startPresenter(mode);else toast('⚠️ '+err.type)});
   presenterPeer.on('open',id=>{document.getElementById('room-code-display').textContent=id;generateQR(id);showQR()});
   presenterPeer.on('connection',c=>{
@@ -684,7 +709,7 @@ function startPresenter(mode){
             return;
           }
           annotatorConn=c;updatePresenterBadge();toast('📱 Annotator joined!');
-          c.send({type:'mode_set',mode:presMode});
+          c.send(modeMsg(presMode));if(presMode==='pdf'&&!(pdfDoc||imgSlides.length))c.send({type:'no_content'});
           if(presMode==='pdf'&&(pdfDoc||imgSlides.length))sendPageToConn(c);
           else if(presMode==='wb'){initWbPresCanvas();sendWbSnapshot()}
           // send existing questions to annotator
@@ -692,7 +717,7 @@ function startPresenter(mode){
           c.on('close',()=>{annotatorConn=null;updatePresenterBadge();toast('Annotator left')});
         } else if(d.role==='guest'){
           guestCounter++;const gNum=guestCounter;guestConns.set(c.peer,c);
-          c.send({type:'mode_set',mode:presMode,guestNum:gNum});
+          c.send(modeMsg(presMode,{guestNum:gNum}));if(presMode==='pdf'&&!(pdfDoc||imgSlides.length))c.send({type:'no_content'});
           // Small delay so connection is stable before pushing image data
           if(presMode==='pdf'&&(pdfDoc||imgSlides.length))setTimeout(()=>sendLowResToGuest(c),1500);
           else if(presMode==='wb')setTimeout(()=>sendWbSnapshotToConn(c,true),1500);
@@ -722,7 +747,7 @@ function switchPresMode(mode){
   document.getElementById('wb-wrap').classList.toggle('on',mode==='wb');
   document.getElementById('page-nav').style.display=(mode==='pdf'&&totalPages>1)?'flex':'none';
   if(mode==='wb')initWbPresCanvas();
-  const msg={type:'mode_set',mode};
+  const msg=modeMsg(mode);
   if(annotatorConn)annotatorConn.send(msg);
   guestConns.forEach(c=>c.send(msg));
   if(mode==='pdf'&&(pdfDoc||imgSlides.length)){
@@ -741,7 +766,7 @@ function showQR(){document.getElementById('qr-panel').classList.remove('hidden')
 function toggleQR(){document.getElementById('qr-panel').classList.toggle('hidden')}
 
 // Q&A UI
-function addQuestionToUI(q){
+function addQuestionToUI(q){noteFocusQuestion();
   const html=`<div class="qa-item new" id="qi-${q.id}"><div class="qa-item-meta"><span>Guest #${q.guestNum}</span><span>${q.time}</span></div><div class="qa-item-text">${escHtml(q.text)}</div></div>`;
   ['pres','draw'].forEach(t=>{
     const list=document.getElementById('qa-list-'+t);
@@ -803,7 +828,7 @@ function sendAnnounce(){
   closeAnnounce();
 }
 
-function dismissNotif(){document.getElementById('draw-notif-bar').classList.remove('show')}
+
 
 function clearQuestions(){
   questions=[];
@@ -921,7 +946,7 @@ function requestDeckSwitch(i){
   toast('📁 Switching file…');
 }
 function broadcastModeAndPage(){
-  const msg={type:'mode_set',mode:'pdf'};
+  const msg=modeMsg('pdf');
   if(annotatorConn){annotatorConn.send(msg);sendPageToConn(annotatorConn,false)}
   guestConns.forEach(c=>{c.send(msg);setTimeout(()=>sendLowResToGuest(c),200)});
 }
@@ -975,13 +1000,14 @@ async function changePage(delta){
 async function sendPageToConn(c,isGuest=false){
   if(!c||c.open===false)return;
   if(isGuest){sendLowResToGuest(c);return;}
-  // Annotator gets full quality with annotations overlaid
+  // Annotator copy: capped at 1400px wide, JPEG 0.8 — much lighter than the raw canvas
+  const sc=Math.min(1,1400/Math.max(pdfCanvas.width,1));
   const tmp=document.createElement('canvas');
-  tmp.width=pdfCanvas.width;tmp.height=pdfCanvas.height;
+  tmp.width=Math.max(1,Math.round(pdfCanvas.width*sc));tmp.height=Math.max(1,Math.round(pdfCanvas.height*sc));
   const ctx=tmp.getContext('2d');
-  ctx.drawImage(pdfCanvas,0,0);
-  ctx.drawImage(overlayCanvas,0,0);
-  c.send({type:'page_image',page:currentPage,total:totalPages,dataURL:tmp.toDataURL('image/jpeg',.82),contentType});
+  ctx.drawImage(pdfCanvas,0,0,tmp.width,tmp.height);
+  ctx.drawImage(overlayCanvas,0,0,tmp.width,tmp.height);
+  c.send({type:'page_image',page:currentPage,total:totalPages,dataURL:tmp.toDataURL('image/jpeg',.8),contentType});
 }
 
 // ── CHUNKED IMAGE SENDING FOR GUESTS ──────────────────────────────
@@ -993,7 +1019,7 @@ function sendLowResToGuest(c){
   if(!c||c.open===false)return;
   if(!pdfCanvas.width||!pdfCanvas.height)return;
   // Small canvas for guests: max 320px wide
-  const maxW=320;
+  const maxW=640;
   const scale=Math.min(1,maxW/Math.max(pdfCanvas.width,1));
   const tmp=document.createElement('canvas');
   tmp.width=Math.max(1,Math.round(pdfCanvas.width*scale));
@@ -1001,7 +1027,7 @@ function sendLowResToGuest(c){
   const ctx=tmp.getContext('2d');
   ctx.drawImage(pdfCanvas,0,0,tmp.width,tmp.height);
   ctx.drawImage(overlayCanvas,0,0,tmp.width,tmp.height);
-  const url=tmp.toDataURL('image/jpeg',.32);
+  const url=tmp.toDataURL('image/jpeg',.55);
   _sendChunked(c,{type:'page_image',page:currentPage,total:totalPages,contentType},url);
 }
 
@@ -1059,9 +1085,9 @@ function sendWbSnapshotToConn(c,lowRes=false){
     const tmp=document.createElement('canvas');
     tmp.width=Math.round(wc.width*scale);tmp.height=Math.round(wc.height*scale);
     tmp.getContext('2d').drawImage(wc,0,0,tmp.width,tmp.height);
-    c.send({type:'wb_snapshot',dataURL:tmp.toDataURL('image/jpeg',.5)});
+    c.send({type:'wb_snapshot',aspect:wc.height/wc.width,dataURL:tmp.toDataURL('image/jpeg',.5)});
   } else {
-    c.send({type:'wb_snapshot',dataURL:wc.toDataURL('image/jpeg',.78)});
+    c.send({type:'wb_snapshot',aspect:wc.height/wc.width,dataURL:wc.toDataURL('image/jpeg',.78)});
   }
 }
 
@@ -1070,6 +1096,7 @@ function handlePresenterDrawData(data){
   if(data.type==='request_mode'){switchPresMode(data.mode);return}
   if(data.type==='page_request'){changePage(data.delta);return}
   if(data.type==='deck_switch_request'){switchDeck(data.index);return}
+  if(data.type==='wb_refresh_request'){if(annotatorConn)sendWbSnapshotToConn(annotatorConn,false);return}
   if(data.type==='guest_refresh_request'){
     // Find this guest's conn and resend
     guestConns.forEach(c=>{if(c.peer===data._from||c===annotatorConn){}});
@@ -1080,8 +1107,8 @@ function handlePresenterDrawData(data){
   if(presMode==='pdf'){
     if(!annotations[currentPage])annotations[currentPage]=[];
     const strokes=annotations[currentPage];
-    if(data.type==='stroke_begin'){currentStroke={color:data.color,width:data.width,eraser:data.eraser,pts:[{x:data.x,y:data.y}]};strokes.push(currentStroke)}
-    else if(data.type==='stroke_point'&&currentStroke){currentStroke.pts.push({x:data.x,y:data.y});redrawPdfAnnotations();broadcastWbUpdate(data)}
+    if(data.type==='stroke_begin'){currentStroke={color:data.color,width:data.width,eraser:data.eraser,pts:[{x:data.x,y:data.y}]};strokes.push(currentStroke);drawSegOverlay(currentStroke,null,{x:data.x,y:data.y})}
+    else if(data.type==='stroke_point'&&currentStroke){{const _last=currentStroke.pts[currentStroke.pts.length-1],_p={x:data.x,y:data.y};currentStroke.pts.push(_p);drawSegOverlay(currentStroke,_last,_p)}}
     else if(data.type==='stroke_end'){currentStroke=null}
     else if(data.type==='clear_page'){annotations[data.page]=[];if(data.page===currentPage)redrawPdfAnnotations()}
     else if(data.type==='undo'){if(strokes.length){strokes.pop();redrawPdfAnnotations()}}
@@ -1103,6 +1130,13 @@ function handlePresenterDrawData(data){
   }
 }
 function broadcastWbUpdate(){}
+// Draw ONLY the newest segment (a full redraw per point got slower with every stroke)
+function drawSegOverlay(st,a,b){
+  const W=overlayCanvas.width,H=overlayCanvas.height,ctx=overlayCanvas.getContext('2d');
+  ctx.save();ctx.globalCompositeOperation=st.eraser?'destination-out':'source-over';
+  ctx.strokeStyle=st.eraser?'rgba(0,0,0,1)':st.color;ctx.lineWidth=st.width*Math.min(W,H)/100;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo((a||b).x*W,(a||b).y*H);ctx.lineTo(b.x*W,b.y*H);ctx.stroke();ctx.restore();
+}
 
 function clearPresenter(){
   if(presMode==='pdf'){annotations={};redrawPdfAnnotations();if(annotatorConn)annotatorConn.send({type:'clear_all'});guestConns.forEach(c=>sendPageToConn(c,true))}
@@ -1115,148 +1149,19 @@ function toggleFullscreen(){
 }
 
 // ANNOTATOR SETUP
-function startDrawer(code,password=''){
-  myRole='annotator';showScreen('drawer');
-  const myId='ann_'+Math.random().toString(36).substr(2,8);
-  clientPeer=new Peer(myId,{host:'0.peerjs.com',port:443,secure:true,path:'/'});
-  clientPeer.on('error',err=>toast('Error: '+err.type));
-  clientPeer.on('open',()=>{
-    clientConn=clientPeer.connect(code,{reliable:true});
-    document.getElementById('draw-status').textContent='Connecting…';
-    clientConn.on('open',()=>{
-      clientConn.send({type:'identify',role:'annotator',password});
-      document.getElementById('draw-dot').className='status-dot online';
-      document.getElementById('draw-status').textContent='Room '+code;
-      toast('✅ Connected as Annotator!');
-    });
-    clientConn.on('data',d=>{
-      if(d.type==='auth_failed'){
-        goHome();
-        setTimeout(()=>{
-          openAnnotatorPw();
-          setTimeout(()=>{
-            const err=document.getElementById('pw-err');
-            if(err){err.textContent='🔒 '+d.reason;err.classList.add('show')}
-          },200);
-        },300);
-        return;
-      }
-      handleDrawerData(d);
-    });
-    clientConn.on('close',()=>{document.getElementById('draw-dot').className='status-dot';document.getElementById('draw-status').textContent='Disconnected';toast('Disconnected')});
-    clientConn.on('error',()=>toast('⚠️ Cannot reach room '+code));
-  });
-}
+
 
 // GUEST SETUP
-function startGuest(code){
-  myRole='guest';showScreen('guest');let myGuestNum=0;
-  const myId='gst_'+Math.random().toString(36).substr(2,8);
-  clientPeer=new Peer(myId,{host:'0.peerjs.com',port:443,secure:true,path:'/'});
-  clientPeer.on('error',err=>toast('Error: '+err.type));
-  clientPeer.on('open',()=>{
-    clientConn=clientPeer.connect(code,{reliable:true});
-    document.getElementById('guest-status').textContent='Connecting…';
-    clientConn.on('open',()=>{
-      clientConn.send({type:'identify',role:'guest'});
-      document.getElementById('guest-dot').className='status-dot online';
-      document.getElementById('guest-status').textContent='Room '+code;
-      toast('✅ Connected as Guest!');
-    });
-    const _gBuf={}; // chunk reassembly buffer
 
-    clientConn.on('data',d=>{
-      // ── CHUNKED IMAGE PROTOCOL ──
-      if(d.type==='img_start'){
-        _gBuf[d.id]={n:d.n,page:d.page,total:d.total,ct:d.ct,chunks:new Array(d.n),got:0};
-        document.getElementById('guest-waiting').classList.add('hidden');
-        document.getElementById('guest-refresh-btn').style.display='none';
-        document.getElementById('guest-pg-info').textContent=`Slide ${d.page}/${d.total}`;
-        clearTimeout(window._gRetry);
-        return;
-      }
-      if(d.type==='img_chunk'){
-        const b=_gBuf[d.id];if(!b)return;
-        b.chunks[d.i]=d.d;b.got++;
-        if(b.got===b.n){
-          const url=b.chunks.join('');
-          delete _gBuf[d.id];
-          _displayGuestImage(url,b.page,b.total);
-        }
-        return;
-      }
-      // ── STANDARD MESSAGES ──
-      if(d.type==='hello_from_presenter'){}
-      else if(d.type==='mode_set'){
-        if(d.guestNum){myGuestNum=d.guestNum;document.getElementById('guest-badge').textContent='Guest #'+d.guestNum}
-        handleGuestModeSet(d.mode);
-        // show refresh button if no image arrives in 5s
-        clearTimeout(window._gRetry);
-        window._gRetry=setTimeout(()=>{
-          if(!document.getElementById('guest-waiting').classList.contains('hidden'))
-            document.getElementById('guest-refresh-btn').style.display='block';
-        },5000);
-      }
-      else if(d.type==='page_image'){
-        // legacy fallback (non-chunked)
-        document.getElementById('guest-waiting').classList.add('hidden');
-        document.getElementById('guest-refresh-btn').style.display='none';
-        document.getElementById('guest-pg-info').textContent=`Slide ${d.page}/${d.total}`;
-        clearTimeout(window._gRetry);
-        _displayGuestImage(d.dataURL,d.page,d.total);
-      }
-      else if(d.type==='wb_snapshot'){
-        document.getElementById('guest-waiting').classList.add('hidden');
-        clearTimeout(window._gRetry);
-        const img=new Image();img.onload=()=>{
-          const wc=document.getElementById('guest-wb-canvas');
-          const wrap=document.getElementById('guest-wb-wrap');
-          wc.width=wrap.clientWidth||800;wc.height=wrap.clientHeight||500;
-          wc.getContext('2d').drawImage(img,0,0,wc.width,wc.height);
-        };img.src=d.dataURL;
-      }
-      else if(d.type==='wb_clear'){
-        const wc=document.getElementById('guest-wb-canvas');
-        const ctx=wc.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wc.width,wc.height);
-      }
-      else if(d.type==='guest_announce'){
-        const banner=document.getElementById('guest-announce');
-        document.getElementById('guest-announce-text').textContent=d.text;
-        banner.classList.add('show');
-        clearTimeout(window._gaBannerTimer);
-        window._gaBannerTimer=setTimeout(()=>banner.classList.remove('show'),12000);
-      }
-    });
-    clientConn.on('close',()=>{document.getElementById('guest-dot').className='status-dot';document.getElementById('guest-status').textContent='Disconnected';toast('Disconnected')});
-    clientConn.on('error',()=>toast('⚠️ Cannot reach room '+code));
-  });
-  document.getElementById('guest-q-input').addEventListener('keyup',e=>{if(e.key==='Enter')sendQuestion()});
-  // Store guestNum for sendQuestion
-  window._myGuestNum=()=>myGuestNum;
-}
 
 function handleGuestModeSet(mode){
   const gvw=document.getElementById('guest-view-wrap');
   const gww=document.getElementById('guest-wb-wrap');
   if(mode==='wb'){gvw.style.display='none';gww.classList.add('on')}
-  else{gvw.style.display='flex';gww.classList.remove('on');document.getElementById('guest-waiting').classList.remove('hidden')}
+  else{gvw.style.display='flex';gww.classList.remove('on');if(!guestHasImage)document.getElementById('guest-waiting').classList.remove('hidden')}
 }
 
-function _displayGuestImage(url,page,total){
-  const img=new Image();
-  img.onload=()=>{
-    const wrap=document.getElementById('guest-view-wrap');
-    const gc=document.getElementById('guest-canvas');
-    const wW=wrap.clientWidth||window.innerWidth;
-    const wH=wrap.clientHeight||(window.innerHeight-120);
-    const scale=Math.min(wW/img.width,wH/img.height)*0.99;
-    gc.width=Math.round(img.width*scale);
-    gc.height=Math.round(img.height*scale);
-    gc.getContext('2d').drawImage(img,0,0,gc.width,gc.height);
-  };
-  img.onerror=()=>toast('⚠️ Could not display slide');
-  img.src=url;
-}
+
 
 function guestRequestRefresh(){
   if(clientConn&&clientConn.open!==false){
@@ -1271,7 +1176,7 @@ function sendQuestion(){
   const inp=document.getElementById('guest-q-input');
   const text=inp.value.trim();if(!text){toast('Type a question first');return}
   if(!clientConn||clientConn.open===false){toast('Not connected');return}
-  clientConn.send({type:'question',text,guestNum:window._myGuestNum?window._myGuestNum():0});
+  clientConn.send({type:'question',text,guestNum:myGuestNum});
   inp.value='';
   const st=document.getElementById('guest-sent-toast');st.classList.add('show');setTimeout(()=>st.classList.remove('show'),2000);
 }
@@ -1287,28 +1192,26 @@ function handleDrawerData(data){
     const pdw=document.getElementById('draw-wrap');const wbw=document.getElementById('wb-draw-wrap');
     const nav=document.getElementById('slide-nav');const badge=document.getElementById('draw-mode-badge');
     const mb_pdf=document.getElementById('mb-pdf');const mb_wb=document.getElementById('mb-wb');
-    if(data.mode==='wb'){pdw.style.display='none';wbw.classList.add('on');nav.style.display='none';badge.className='badge badge-wb';badge.textContent='Whiteboard';mb_pdf.className='mode-bar-btn';mb_wb.className='mode-bar-btn on-wb';initWbDrawCanvas()}
-    else{pdw.style.display='flex';wbw.classList.remove('on');nav.style.display='flex';badge.className='badge badge-green';badge.textContent='PDF/PPT';mb_pdf.className='mode-bar-btn on';mb_wb.className='mode-bar-btn'}
+    if(data.mode==='wb'){pdw.style.display='none';wbw.classList.add('on');nav.style.display='none';badge.className='badge badge-wb';badge.textContent='Whiteboard';mb_pdf.className='mode-bar-btn';mb_wb.className='mode-bar-btn on-wb';if(data.aspect)wbAspect=data.aspect;initWbDrawCanvas()}
+    else{pdw.style.display='flex';wbw.classList.remove('on');nav.style.display='flex';badge.className='badge badge-green';badge.textContent='PDF/PPT';mb_pdf.className='mode-bar-btn on';mb_wb.className='mode-bar-btn';relayoutDrawer()}
   }
   else if(data.type==='page_image'){
     document.getElementById('draw-waiting').classList.add('hidden');
-    pageBg.onload=()=>{requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(resizeDrawCanvas)))};
+    pageBg.onload=()=>{setupDrawCanvasForImage();requestAnimationFrame(()=>requestAnimationFrame(resizeDrawCanvas))};
     pageBg.src=data.dataURL;
     document.getElementById('draw-pg-num').textContent=data.page;
     document.getElementById('draw-pg-total').textContent='/ '+(data.contentType==='images'?data.total+' slides':data.total+' pages');
     clearDrawCanvas();
   }
-  else if(data.type==='wb_snapshot'){const img=new Image();img.onload=()=>{const ctx=wbCanvasDraw.getContext('2d');ctx.drawImage(img,0,0,wbCanvasDraw.width,wbCanvasDraw.height)};img.src=data.dataURL}
+  else if(data.type==='wb_snapshot'){applyWbSnapshot(data)}
   else if(data.type==='clear_all'){clearDrawCanvas()}
   else if(data.type==='wb_clear'){const ctx=wbCanvasDraw.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wbCanvasDraw.width,wbCanvasDraw.height)}
   else if(data.type==='new_question'){questions.push(data.question);addQuestionToUI(data.question)}
   else if(data.type==='all_questions'){questions=data.questions;rebuildQAList()}
+  else if(data.type==='no_content'){_el('draw-waiting-txt').textContent='Connected ✓ — the presenter has not opened a file yet.'}
   else if(data.type==='deck_list'){renderDeckListDraw(data.decks,data.current)}
   else if(data.type==='presenter_notify'){
-    const bar=document.getElementById('draw-notif-bar');
-    document.getElementById('draw-notif-text').textContent=data.text;
-    document.getElementById('draw-notif-time').textContent=data.time||'';
-    bar.classList.add('show');
+    addNotif(data.text,data.time);
     toast('🔔 Message from presenter');
   }
 }
@@ -1322,48 +1225,8 @@ function rebuildQAList(){
   });
 }
 
-function resizeDrawCanvas(){
-  const wrap=document.getElementById('draw-wrap');
-  const left=document.getElementById('drawer-left');
-  const isLandscape=window.innerWidth>window.innerHeight;
-  const iW=pageBg.naturalWidth||800,iH=pageBg.naturalHeight||600;
-  const aspect=iH/iW; // height per unit width
 
-  if(isLandscape){
-    // Landscape: fill the entire left panel height
-    const availW=left?left.getBoundingClientRect().width:window.innerWidth*0.65;
-    const topBarsH=(document.querySelector('#drawer .top-bar')||{offsetHeight:42}).offsetHeight
-                  +(document.getElementById('mode-bar-row')||{offsetHeight:0}).offsetHeight;
-    const slideNavH=(document.getElementById('slide-nav')||{offsetHeight:40}).offsetHeight;
-    const toolbarH=(document.querySelector('#drawer .toolbar')||{offsetHeight:52}).offsetHeight;
-    const availH=window.innerHeight-topBarsH-slideNavH-toolbarH-4;
-    const scale=Math.min(availW/iW, availH/iH)*0.99;
-    const fw=Math.round(iW*scale),fh=Math.round(iH*scale);
-    wrap.style.height=fh+'px';
-    pageBg.style.width=fw+'px';pageBg.style.height=fh+'px';
-    drawCanvas.width=fw;drawCanvas.height=fh;
-  } else {
-    // Portrait: slide fills full width, height from aspect ratio
-    const availW=window.innerWidth;
-    const fw=availW;
-    const fh=Math.round(availW*aspect);
-    wrap.style.height=fh+'px';
-    pageBg.style.width=fw+'px';pageBg.style.height=fh+'px';
-    drawCanvas.width=fw;drawCanvas.height=fh;
-  }
-}
-function initWbDrawCanvas(){
-  const isLandscape=window.innerWidth>window.innerHeight;
-  const left=document.getElementById('drawer-left');
-  const W=left?left.getBoundingClientRect().width||window.innerWidth:window.innerWidth;
-  const toolbarH=52,topH=42,modeH=38,slideNavH=0; // slideNav hidden in WB mode
-  const H=isLandscape?(window.innerHeight-topH-toolbarH-4):(window.innerHeight*0.62);
-  wbCanvasDraw.width=Math.round(W);
-  wbCanvasDraw.height=Math.round(H);
-  const wrap=document.getElementById('wb-draw-wrap');
-  wrap.style.height=Math.round(H)+'px';
-  const ctx=wbCanvasDraw.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wbCanvasDraw.width,wbCanvasDraw.height);
-}
+
 
 // DRAWING
 let drawing=false,lastPt=null;
@@ -1419,15 +1282,250 @@ function goFullscreen(){
 window.addEventListener('resize',()=>{
   if(document.getElementById('presenter').classList.contains('active')){
     if(presMode==='pdf'&&(pdfDoc||imgSlides.length))renderPresenterPage(currentPage);
-    else if(presMode==='wb')initWbPresCanvas();
+    else if(presMode==='wb'){initWbPresCanvas();sendWbSnapshotThrottled()}
   }
   if(document.getElementById('drawer').classList.contains('active')){
     requestAnimationFrame(()=>{
       if(drawerMode==='pdf'&&pageBg.src)resizeDrawCanvas();
-      else if(drawerMode==='wb')initWbDrawCanvas();
+      else if(drawerMode==='wb')layoutWb();
     });
   }
 });
+
+// ═══════════════ v13: JOIN FLOW + ANNOTATOR LAYOUT ═══════════════
+const _el=id=>document.getElementById(id);
+const PEER_OPTS={host:'0.peerjs.com',port:443,secure:true,path:'/',
+  config:{iceServers:[
+    {urls:'stun:stun.l.google.com:19302'},
+    {urls:'stun:stun1.l.google.com:19302'},
+    {urls:'stun:global.stun.twilio.com:3478'},
+    {urls:['turn:eu-0.turn.peerjs.com:3478','turn:us-0.turn.peerjs.com:3478'],username:'peerjs',credential:'peerjsp'}
+  ],sdpSemantics:'unified-plan'}};
+const REASON_SERVER="Can't reach the free shared PeerJS signaling server (0.peerjs.com). It is sometimes slow or down. Check your internet, then try again in a minute.";
+const REASON_P2P="The server was reachable, but a direct link to the presenter could not be opened. This usually means the network blocks peer-to-peer traffic (guest Wi-Fi, some mobile data). Try the same Wi-Fi as the presenter.";
+
+let lastJoin=null,joinToken=0,myGuestNum=0,_gBuf={},guestHasImage=false;
+let zoomLevel=1,panMode=false,wbAspect=0.5625,notifs=[],focusUnseen=0;
+const ZOOMS=[1,1.5,2,3];
+
+function wbAspectNow(){const wc=_el('wb-canvas-pres');return(wc&&wc.width)?wc.height/wc.width:0.5625}
+function modeMsg(mode,extra){return Object.assign({type:'mode_set',mode,aspect:wbAspectNow()},extra||{})}
+
+// ── join diagnostics overlay ──
+function jdLog(msg,cls){const l=_el('jd-log');const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});l.insertAdjacentHTML('beforeend','<div class="'+(cls||'')+'">'+t+'  '+escHtml(msg)+'</div>');l.scrollTop=l.scrollHeight}
+function jdShow(title){_el('join-diag').classList.remove('hidden');_el('jd-title').textContent=title;_el('jd-reason').textContent='';_el('jd-spin').style.display='block';_el('jd-actions').style.display='none'}
+function jdHide(){_el('join-diag').classList.add('hidden')}
+function jdFail(title,reason){_el('join-diag').classList.remove('hidden');_el('jd-title').textContent=title;_el('jd-reason').textContent=reason;_el('jd-spin').style.display='none';_el('jd-actions').style.display='flex';jdLog('Stopped: '+title,'bad')}
+
+function teardownClient(){
+  const c=clientConn,p=clientPeer;clientConn=null;clientPeer=null;
+  if(c){try{c.close()}catch(e){}}
+  if(p){try{p.destroy()}catch(e){}}
+}
+
+function startDrawer(code,password){joinRoom('annotator',code,password||'')}
+function startGuest(code){joinRoom('guest',code,'')}
+function joinRoom(role,code,password){
+  joinToken++;lastJoin={role,code,password};myRole=role;myGuestNum=0;guestHasImage=false;_gBuf={};
+  showScreen(role==='guest'?'guest':'drawer');
+  _el('jd-log').innerHTML='';jdShow('Joining room '+code+'…');
+  jdLog('Browser online: '+navigator.onLine);
+  attemptJoin(1);
+}
+function rejoinRoom(){
+  if(!lastJoin)return;joinToken++;guestHasImage=false;_gBuf={};
+  _el('jd-log').innerHTML='';jdShow('Joining room '+lastJoin.code+'…');attemptJoin(1);
+}
+function attemptJoin(attempt){
+  const tk=joinToken,role=lastJoin.role,code=lastJoin.code,password=lastJoin.password,MAX=3;
+  teardownClient();
+  jdLog('Attempt '+attempt+'/'+MAX+': contacting signaling server…');
+  const t0=performance.now();let opened=false,done=false,sigT=null,connT=null;
+  const stale=()=>tk!==joinToken;
+  const fail=(why,reason)=>{
+    if(done||opened||stale())return;done=true;clearTimeout(sigT);clearTimeout(connT);
+    jdLog(why,'warn');
+    if(attempt<MAX){jdLog('Retrying in '+(1.5*attempt)+' s…');setTimeout(()=>{if(!stale())attemptJoin(attempt+1)},1500*attempt)}
+    else{teardownClient();jdFail("Couldn't join the room",reason)}
+  };
+  const peer=clientPeer=new Peer((role==='guest'?'gst_':'ann_')+Math.random().toString(36).slice(2,10),PEER_OPTS);
+  sigT=setTimeout(()=>fail('Signaling server did not answer within 10 s.',REASON_SERVER),10000);
+  peer.on('error',err=>{
+    if(opened||done||stale())return;
+    if(err.type==='peer-unavailable'){done=true;clearTimeout(sigT);clearTimeout(connT);teardownClient();jdFail('Room not found','Room '+code+' does not exist. Check the 6-digit code and make sure the presenter page is still open.');return}
+    fail('Error: '+err.type,err.type==='webrtc'?REASON_P2P:REASON_SERVER);
+  });
+  peer.on('open',()=>{
+    if(done||stale())return;clearTimeout(sigT);
+    jdLog('Server reached in '+Math.round(performance.now()-t0)+' ms. Opening link to room '+code+'…','ok');
+    const conn=clientConn=peer.connect(code,{reliable:true});
+    connT=setTimeout(()=>fail('Direct link to the presenter did not open within 15 s.',REASON_P2P),15000);
+    conn.on('open',()=>{
+      if(done||stale())return;opened=true;clearTimeout(connT);
+      jdLog('Linked to presenter in '+Math.round(performance.now()-t0)+' ms.','ok');
+      conn.send({type:'identify',role,password});
+      jdHide();
+      const dot=_el(role==='guest'?'guest-dot':'draw-dot'),st=_el(role==='guest'?'guest-status':'draw-status');
+      dot.className='status-dot online';st.textContent='Room '+code;
+      toast('✅ Connected as '+(role==='guest'?'Guest':'Annotator')+'!');
+    });
+    conn.on('data',d=>{if(stale())return;if(role==='guest')handleGuestData(d);else handleAnnotatorMsg(d)});
+    conn.on('close',()=>{
+      if(stale()||clientConn!==conn)return;
+      if(!opened){fail('Link closed before it opened.',REASON_P2P);return}
+      _el(role==='guest'?'guest-dot':'draw-dot').className='status-dot';
+      _el(role==='guest'?'guest-status':'draw-status').textContent='Disconnected';
+      _el('jd-log').innerHTML='';jdFail('Disconnected from presenter','The presenter may have closed the page, or your network dropped. Tap Try again to reconnect.');
+    });
+    conn.on('error',()=>fail('Connection error.',REASON_P2P));
+  });
+}
+
+function handleAnnotatorMsg(d){
+  if(d.type==='auth_failed'){
+    const reason=d.reason,code=lastJoin&&lastJoin.code;
+    goHome();
+    setTimeout(()=>{openAnnotatorPw();const c=_el('pw-code');if(c&&code)c.value=code;const err=_el('pw-err');if(err){err.textContent='🔒 '+reason;err.classList.add('show')}},300);
+    return;
+  }
+  handleDrawerData(d);
+}
+
+function joinAsAnnotatorFromHash(){
+  const code=_el('room-input').value.trim();
+  openAnnotatorPw();const c=_el('pw-code');if(c)c.value=code;
+}
+
+// ── guest ──
+function handleGuestData(d){
+  if(d.type==='img_start'){
+    _gBuf[d.id]={n:d.n,page:d.page,total:d.total,chunks:new Array(d.n),got:0};
+    _el('guest-wait-txt').textContent='Receiving slide…';
+    _el('guest-pg-info').textContent='Slide '+d.page+'/'+d.total;
+    clearTimeout(window._gRetry);return;
+  }
+  if(d.type==='img_chunk'){
+    const b=_gBuf[d.id];if(!b)return;
+    b.chunks[d.i]=d.d;b.got++;
+    if(b.got===b.n){const url=b.chunks.join('');delete _gBuf[d.id];_displayGuestImage(url,b.page,b.total)}
+    return;
+  }
+  if(d.type==='mode_set'){
+    if(d.guestNum){myGuestNum=d.guestNum;_el('guest-badge').textContent='Guest #'+d.guestNum}
+    handleGuestModeSet(d.mode);
+    clearTimeout(window._gRetry);
+    window._gRetry=setTimeout(()=>{if(!guestHasImage)_el('guest-refresh-btn').style.display='block'},5000);
+  }
+  else if(d.type==='no_content'){_el('guest-wait-txt').textContent='Connected ✓ — the presenter has not opened a file yet.';clearTimeout(window._gRetry)}
+  else if(d.type==='page_image'){_displayGuestImage(d.dataURL,d.page,d.total)}
+  else if(d.type==='wb_snapshot'){
+    const img=new Image();
+    img.onload=()=>{
+      const wc=_el('guest-wb-canvas'),wrap=_el('guest-wb-wrap');
+      const wW=wrap.clientWidth||window.innerWidth,wH=wrap.clientHeight||(window.innerHeight-120);
+      const sc=Math.min(wW/img.width,wH/img.height)*0.99;
+      wc.width=Math.max(1,Math.round(img.width*sc));wc.height=Math.max(1,Math.round(img.height*sc));
+      wc.getContext('2d').drawImage(img,0,0,wc.width,wc.height);
+      guestHasImage=true;_el('guest-waiting').classList.add('hidden');clearTimeout(window._gRetry);
+    };
+    img.src=d.dataURL;
+  }
+  else if(d.type==='wb_clear'){const wc=_el('guest-wb-canvas');const ctx=wc.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wc.width,wc.height)}
+  else if(d.type==='guest_announce'){
+    const banner=_el('guest-announce');_el('guest-announce-text').textContent=d.text;banner.classList.add('show');
+    clearTimeout(window._gaBannerTimer);window._gaBannerTimer=setTimeout(()=>banner.classList.remove('show'),12000);
+  }
+}
+function _displayGuestImage(url,page,total){
+  const img=new Image();
+  img.onload=()=>{
+    const wrap=_el('guest-view-wrap'),gc=_el('guest-canvas');
+    const wW=wrap.clientWidth||window.innerWidth,wH=wrap.clientHeight||(window.innerHeight-120);
+    const sc=Math.min(wW/img.width,wH/img.height)*0.99;
+    gc.width=Math.max(1,Math.round(img.width*sc));gc.height=Math.max(1,Math.round(img.height*sc));
+    gc.getContext('2d').drawImage(img,0,0,gc.width,gc.height);
+    guestHasImage=true;_el('guest-waiting').classList.add('hidden');
+    const rb=_el('guest-refresh-btn');if(rb)rb.style.display='none';
+    clearTimeout(window._gRetry);
+    if(total)_el('guest-pg-info').textContent='Slide '+page+'/'+total;
+  };
+  img.onerror=()=>toast('⚠️ Could not display slide');
+  img.src=url;
+}
+
+// ── annotator layout / zoom / focus ──
+function layoutArea(wrap,stage,iW,iH){
+  const fill=window.innerWidth>window.innerHeight||_el('drawer').classList.contains('focus');
+  if(fill)wrap.style.height='';
+  else wrap.style.height=Math.min(Math.round(window.innerWidth*iH/iW),Math.round(window.innerHeight*0.62))+'px';
+  const r=wrap.getBoundingClientRect();
+  if(r.width<2||r.height<2)return null;
+  const sc=Math.min(r.width/iW,r.height/iH);
+  const fw=Math.floor(iW*sc),fh=Math.floor(iH*sc);
+  stage.style.width=Math.round(fw*zoomLevel)+'px';stage.style.height=Math.round(fh*zoomLevel)+'px';
+  return{fw,fh};
+}
+function resizeDrawCanvas(){layoutArea(_el('draw-wrap'),_el('draw-stage'),pageBg.naturalWidth||1600,pageBg.naturalHeight||900)}
+function setupDrawCanvasForImage(){
+  const iW=pageBg.naturalWidth||1600,iH=pageBg.naturalHeight||900,cw=Math.min(iW,1600);
+  drawCanvas.width=cw;drawCanvas.height=Math.round(cw*iH/iW);   // fixed bitmap size: rotating the tablet never erases strokes
+}
+function layoutWb(){layoutArea(_el('wb-draw-wrap'),_el('wb-stage'),1000,Math.round(1000*wbAspect))}
+function initWbDrawCanvas(){
+  const W=1600,H=Math.round(W*wbAspect);
+  if(wbCanvasDraw.width!==W||wbCanvasDraw.height!==H){wbCanvasDraw.width=W;wbCanvasDraw.height=H}
+  const ctx=wbCanvasDraw.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,W,H);
+  requestAnimationFrame(layoutWb);
+  if(clientConn&&clientConn.open!==false)clientConn.send({type:'wb_refresh_request'});
+}
+function applyWbSnapshot(data){
+  if(data.aspect&&Math.abs(data.aspect-wbAspect)>0.01){wbAspect=data.aspect;initWbDrawCanvas();return}
+  const img=new Image();
+  img.onload=()=>{wbCanvasDraw.getContext('2d').drawImage(img,0,0,wbCanvasDraw.width,wbCanvasDraw.height)};
+  img.src=data.dataURL;
+}
+function relayoutDrawer(){requestAnimationFrame(()=>{if(drawerMode==='wb')layoutWb();else if(pageBg.src)resizeDrawCanvas()})}
+function zoomBy(dir){
+  let i=ZOOMS.indexOf(zoomLevel);if(i<0)i=0;
+  i=Math.max(0,Math.min(ZOOMS.length-1,i+dir));zoomLevel=ZOOMS[i];
+  _el('zoom-lbl').textContent=zoomLevel+'×';relayoutDrawer();
+  if(zoomLevel>1&&!panMode)toast('Tip: tap ✋ to move around the zoomed slide',2500);
+}
+function togglePan(){panMode=!panMode;_el('drawer').classList.toggle('pan',panMode);_el('pan-btn').classList.toggle('on',panMode);toast(panMode?'✋ Move mode — drag to scroll':'✏️ Draw mode',1500)}
+function toggleFocus(){
+  const on=_el('drawer').classList.toggle('focus');_el('focus-btn').classList.toggle('on',on);
+  focusUnseen=0;updateFocusBadge();relayoutDrawer();setTimeout(relayoutDrawer,260);
+  toast(on?'⤢ Focus on — Q&A hidden. Tap again to show it':'Focus off',1800);
+}
+function updateFocusBadge(){const b=_el('focus-badge');if(!b)return;b.textContent=focusUnseen;b.style.display=focusUnseen>0?'flex':'none'}
+function noteFocusQuestion(){const d=_el('drawer');if(d&&d.classList.contains('focus')&&myRole==='annotator'){focusUnseen++;updateFocusBadge();toast('💬 New question',3000)}}
+
+// ── presenter messages (bubbles that stay until cleared) ──
+function addNotif(text,time){
+  notifs.unshift({text,time});if(notifs.length>30)notifs.pop();renderNotifs(true);
+  if(navigator.vibrate){try{navigator.vibrate(80)}catch(e){}}
+  if(_el('drawer').classList.contains('focus')){toast('🔔 '+text,6000);focusUnseen++;updateFocusBadge()}
+}
+function renderNotifs(markNew){
+  const l=_el('notif-list');if(!l)return;
+  if(!notifs.length){l.innerHTML='<div class="notif-empty">No messages yet.<br>Notes from the presenter will appear here.</div>';return}
+  l.innerHTML=notifs.map((n,i)=>'<div class="notif-bubble'+(markNew&&i===0?' new':'')+'">'+escHtml(n.text)+'<span class="nt">'+escHtml(n.time||'')+'</span></div>').join('');
+  l.scrollTop=0;
+  if(markNew)setTimeout(()=>{const b=l.querySelector('.notif-bubble.new');if(b)b.classList.remove('new')},3500);
+}
+function clearNotifs(){notifs=[];renderNotifs(false)}
+
+function resetClientUI(){
+  joinToken++;lastJoin=null;jdHide();
+  zoomLevel=1;panMode=false;myGuestNum=0;guestHasImage=false;_gBuf={};notifs=[];focusUnseen=0;
+  const d=_el('drawer');if(d)d.classList.remove('focus','pan');
+  const zl=_el('zoom-lbl');if(zl)zl.textContent='1×';
+  ['pan-btn','focus-btn'].forEach(id=>{const e=_el(id);if(e)e.classList.remove('on')});
+  updateFocusBadge();renderNotifs(false);
+  const wt=_el('draw-waiting-txt');if(wt)wt.textContent='Waiting for presenter…';
+  const gt=_el('guest-wait-txt');if(gt)gt.textContent='Waiting for presenter to start…';
+  const rb=_el('guest-refresh-btn');if(rb)rb.style.display='none';
+}
 
 // ── PASSWORD SYSTEM ──
 let presPassword='';   // set by presenter
@@ -1578,7 +1676,7 @@ function showPwError(msg){toast('🔒 '+msg,3500)}
 // AUTO-JOIN
 window.addEventListener('load',()=>{
   const m=location.hash.match(/[#&]join=([A-Za-z0-9]+)/);
-  if(m){document.getElementById('room-input').value=m[1];showJoinForm('annotator')}
+  if(m){document.getElementById('room-input').value=m[1];showJoinForm('guest');document.getElementById('join-ann-btn').style.display='flex'}
 });
 </script>
 </body>
