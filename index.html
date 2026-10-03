@@ -3,244 +3,357 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PDF Live Annotator</title>
+  <title>Live Annotator</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-user-select:none;user-select:none}
+    :root{--navy:#0B1E3D;--blue:#2563A8;--lblue:#60A8F0;--white:#FFF;--gray:#9CA3AF;--dark:#1A1A2E;--card:#1A2744;--border:#2A3F6B;--red:#EF4444;--green:#22C55E;--yellow:#EAB308;--purple:#A855F7}
+    html,body{height:100%;overflow:hidden;background:var(--dark);color:var(--white);font-family:'Segoe UI',system-ui,sans-serif}
+    .screen{display:none;height:100dvh;flex-direction:column}
+    .screen.active{display:flex}
 
-    :root {
-      --navy: #0B1E3D; --blue: #2563A8; --lblue: #60A8F0;
-      --white: #FFFFFF; --gray: #9CA3AF; --dark: #1A1A2E;
-      --surface: #16213E; --card: #1A2744; --border: #2A3F6B;
-      --red: #EF4444; --green: #22C55E; --yellow: #EAB308;
-    }
+    /* HOME */
+    #home{align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#1A2744 0%,#0B1E3D 70%);gap:18px;padding:24px}
+    .home-logo{font-size:42px}
+    .home-title{font-size:23px;font-weight:700;text-align:center}
+    .home-sub{font-size:12px;color:var(--gray);text-align:center;max-width:300px;line-height:1.6}
+    .home-btns{display:flex;flex-direction:column;gap:9px;width:100%;max-width:300px}
+    .btn{padding:12px 18px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .15s,transform .1s;display:flex;align-items:center;justify-content:center;gap:8px}
+    .btn:active{transform:scale(.97)}
+    .btn-primary{background:var(--blue);color:var(--white)}
+    .btn-secondary{background:var(--card);color:var(--white);border:1px solid var(--border)}
+    .btn-wb{background:#1a3a1a;color:#4ade80;border:1px solid #2d5e2d}
+    .btn-guest{background:#2d1e3a;color:#c084fc;border:1px solid #5b3a7a}
+    #join-section{display:none;flex-direction:column;gap:9px;width:100%;max-width:300px}
+    .join-form{display:flex;flex-direction:column;gap:8px;width:100%}
+    .join-form input{background:var(--card);border:1px solid var(--border);color:var(--white);padding:12px 16px;border-radius:10px;font-size:16px;text-align:center;letter-spacing:3px;outline:none;-webkit-user-select:text;user-select:text}
+    .join-form input:focus{border-color:var(--blue)}
+    .join-form input::placeholder{letter-spacing:0;color:var(--gray);font-size:13px}
+    .role-btns{display:flex;gap:8px}
+    .role-btns .btn{flex:1;padding:10px 8px;font-size:13px}
 
-    html, body { height: 100%; overflow: hidden; background: var(--dark); color: var(--white); font-family: 'Segoe UI', system-ui, sans-serif; }
+    /* TOP BAR */
+    .top-bar{display:flex;align-items:center;gap:5px;padding:6px 8px;background:rgba(11,30,61,.97);z-index:10;flex-shrink:0;border-bottom:1px solid var(--border)}
+    .bar-title{font-size:11px;font-weight:600;color:var(--lblue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .icon-btn{background:none;border:none;color:var(--white);cursor:pointer;padding:5px 6px;border-radius:6px;font-size:16px;transition:background .15s;display:flex;align-items:center;justify-content:center;line-height:1;position:relative}
+    .icon-btn:hover{background:rgba(255,255,255,.12)}
+    .icon-btn.on{background:var(--blue)}
+    .q-count{position:absolute;top:0;right:0;background:var(--red);color:var(--white);font-size:9px;font-weight:700;min-width:14px;height:14px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 3px;pointer-events:none}
+    .status-dot{width:8px;height:8px;border-radius:50%;background:var(--gray);flex-shrink:0}
+    .status-dot.online{background:var(--green);box-shadow:0 0 6px var(--green)}
+    .badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;white-space:nowrap;flex-shrink:0}
+    .badge-green{background:rgba(34,197,94,.2);color:var(--green)}
+    .badge-red{background:rgba(239,68,68,.2);color:var(--red)}
+    .badge-gray{background:rgba(156,163,175,.1);color:var(--gray)}
+    .badge-wb{background:rgba(74,222,128,.15);color:#4ade80}
+    .badge-guest{background:rgba(192,132,252,.15);color:#c084fc}
+    .mode-pill{display:flex;gap:0;background:rgba(255,255,255,.07);border-radius:6px;overflow:hidden;border:1px solid var(--border);flex-shrink:0}
+    .mode-pill button{padding:4px 8px;font-size:11px;font-weight:600;border:none;background:transparent;color:var(--gray);cursor:pointer}
+    .mode-pill button.on{background:var(--blue);color:var(--white)}
 
-    .screen { display: none; height: 100dvh; flex-direction: column; }
-    .screen.active { display: flex; }
+    /* PRESENTER */
+    #presenter{background:#000;position:relative}
+    #pdf-wrap{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+    #pdf-canvas{display:block}
+    #overlay-canvas{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+    #wb-wrap{flex:1;position:relative;overflow:hidden;display:none;align-items:center;justify-content:center;background:#fff}
+    #wb-wrap.on{display:flex}
+    #wb-canvas-pres{display:block}
+    .wb-label{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(74,222,128,.18);color:#4ade80;font-size:11px;font-weight:600;padding:3px 12px;border-radius:20px;pointer-events:none;z-index:3;border:1px solid rgba(74,222,128,.3)}
+    .upload-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:var(--dark);z-index:5}
+    .upload-overlay p{color:var(--gray);font-size:13px;text-align:center;max-width:280px;line-height:1.5}
+    .upload-btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+    .page-nav{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:rgba(11,30,61,.92);backdrop-filter:blur(8px);padding:6px 14px;border-radius:24px;border:1px solid var(--border)}
+    .page-nav button{background:none;border:none;color:var(--white);cursor:pointer;font-size:18px;padding:2px 5px}
+    .page-nav span{font-size:12px;color:var(--gray);min-width:56px;text-align:center}
+    #qr-panel{position:absolute;top:50px;right:10px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;width:192px;z-index:20}
+    #qr-panel.hidden{display:none}
+    #qr-panel .qr-title{font-size:11px;color:var(--gray);margin-bottom:8px;text-align:center}
+    #qr-panel .room-code{font-size:20px;font-weight:700;color:var(--lblue);letter-spacing:4px;text-align:center;margin-bottom:8px}
+    #qrcode{display:flex;justify-content:center}
+    #qrcode canvas,#qrcode img{border-radius:6px}
+    #qr-panel .qr-hint{font-size:10px;color:var(--gray);text-align:center;margin-top:6px;line-height:1.5}
 
-    /* ── HOME ── */
-    #home { align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #1A2744 0%, #0B1E3D 70%); gap: 24px; padding: 24px; }
-    .home-logo { font-size: 48px; }
-    .home-title { font-size: 26px; font-weight: 700; text-align: center; }
-    .home-sub { font-size: 13px; color: var(--gray); text-align: center; max-width: 320px; line-height: 1.6; }
-    .home-btns { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 320px; }
-    .btn { padding: 13px 20px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity .15s, transform .1s; display: flex; align-items: center; justify-content: center; gap: 10px; }
-    .btn:active { transform: scale(.97); }
-    .btn-primary { background: var(--blue); color: var(--white); }
-    .btn-secondary { background: var(--card); color: var(--white); border: 1px solid var(--border); }
-    .btn-wb { background: #1a3a1a; color: #4ade80; border: 1px solid #2d5e2d; }
-    .join-form { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 320px; }
-    .join-form input { background: var(--card); border: 1px solid var(--border); color: var(--white); padding: 12px 16px; border-radius: 10px; font-size: 15px; text-align: center; letter-spacing: 2px; outline: none; }
-    .join-form input:focus { border-color: var(--blue); }
-    .join-form input::placeholder { color: var(--gray); letter-spacing: 0; }
-    #join-section { display: none; flex-direction: column; gap: 10px; width: 100%; max-width: 320px; }
+    /* Q&A PANEL (presenter + annotator) */
+    .qa-panel{position:absolute;top:0;right:-340px;width:320px;height:100%;background:var(--navy);border-left:1px solid var(--border);z-index:30;display:flex;flex-direction:column;transition:right .25s ease}
+    .qa-panel.open{right:0}
+    .qa-header{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    .qa-header-title{font-size:14px;font-weight:600;color:var(--white)}
+    .qa-header-sub{font-size:11px;color:var(--gray)}
+    .qa-list{flex:1;overflow-y:auto;padding:8px}
+    .qa-item{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+    .qa-item-meta{font-size:10px;color:var(--gray);margin-bottom:4px;display:flex;justify-content:space-between}
+    .qa-item-text{font-size:13px;color:var(--white);line-height:1.5}
+    .qa-item.new{border-color:var(--yellow);background:#1a1a00}
+    .qa-empty{color:var(--gray);font-size:13px;text-align:center;padding:24px;line-height:1.6}
+    .qa-clear-btn{margin:8px;padding:7px;font-size:12px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:var(--red);border-radius:6px;cursor:pointer;flex-shrink:0}
 
-    /* mode tabs */
-    .mode-tabs { display: flex; gap: 0; background: var(--card); border-radius: 10px; overflow: hidden; border: 1px solid var(--border); width: 100%; max-width: 320px; }
-    .mode-tab { flex: 1; padding: 10px; font-size: 13px; font-weight: 600; border: none; background: transparent; color: var(--gray); cursor: pointer; transition: background .15s, color .15s; }
-    .mode-tab.active { background: var(--blue); color: var(--white); }
+    /* DRAWER (TABLET) */
+    #drawer{background:#111}
+    .slide-nav{display:flex;align-items:center;justify-content:center;background:rgba(11,30,61,.98);border-bottom:1px solid var(--border);flex-shrink:0}
+    .slide-btn{flex:1;background:none;border:none;color:var(--white);cursor:pointer;font-size:26px;padding:9px 0;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--border)}
+    .slide-btn:last-of-type{border-right:none}
+    .slide-btn:active{background:rgba(255,255,255,.1)}
+    .slide-info{flex:1.2;text-align:center;padding:9px 0;border-right:1px solid var(--border)}
+    .slide-info .pg-num{font-size:17px;font-weight:700;color:var(--white)}
+    .slide-info .pg-total{font-size:10px;color:var(--gray)}
+    .mode-bar{display:flex;flex-shrink:0;border-bottom:1px solid var(--border)}
+    .mode-bar-btn{flex:1;padding:7px 0;font-size:12px;font-weight:600;border:none;background:var(--card);color:var(--gray);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border-right:1px solid var(--border)}
+    .mode-bar-btn:last-child{border-right:none}
+    .mode-bar-btn.on{background:var(--blue);color:var(--white)}
+    .mode-bar-btn.on-wb{background:#1a3a1a;color:#4ade80}
+    #draw-wrap{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#111;touch-action:none}
+    #page-bg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:block}
+    #draw-canvas{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);touch-action:none;cursor:crosshair}
+    #wb-draw-wrap{flex:1;position:relative;overflow:hidden;display:none;align-items:center;justify-content:center;background:#fff;touch-action:none}
+    #wb-draw-wrap.on{display:flex}
+    #wb-canvas-draw{display:block;touch-action:none;cursor:crosshair}
+    .toolbar{display:flex;align-items:center;justify-content:center;padding:7px 8px;background:rgba(11,30,61,.98);border-top:1px solid var(--border);flex-shrink:0;gap:5px;flex-wrap:wrap}
+    .color-btn{width:26px;height:26px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:transform .1s;flex-shrink:0}
+    .color-btn.on{border-color:var(--white);transform:scale(1.22)}
+    .tool-btn{background:var(--card);border:1px solid var(--border);color:var(--white);border-radius:7px;padding:5px 9px;font-size:12px;cursor:pointer}
+    .tool-btn.on{background:var(--blue);border-color:var(--blue)}
+    .size-btn{background:var(--card);border:1px solid var(--border);color:var(--white);border-radius:7px;padding:5px 8px;font-size:11px;cursor:pointer}
+    .size-btn.on{background:var(--blue)}
+    .tb-sep{width:1px;height:24px;background:var(--border);flex-shrink:0}
 
-    /* ── SHARED BAR ── */
-    .top-bar { display: flex; align-items: center; gap: 6px; padding: 7px 10px; background: rgba(11,30,61,.97); backdrop-filter: blur(8px); z-index: 10; flex-shrink: 0; border-bottom: 1px solid var(--border); }
-    .bar-title { font-size: 12px; font-weight: 600; color: var(--lblue); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .icon-btn { background: none; border: none; color: var(--white); cursor: pointer; padding: 5px 7px; border-radius: 6px; font-size: 17px; transition: background .15s; display: flex; align-items: center; justify-content: center; line-height: 1; }
-    .icon-btn:hover { background: rgba(255,255,255,.12); }
-    .icon-btn.active-btn { background: var(--blue); }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gray); flex-shrink: 0; }
-    .status-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
-    .badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 600; white-space: nowrap; }
-    .badge-green { background: rgba(34,197,94,.2); color: var(--green); }
-    .badge-red { background: rgba(239,68,68,.2); color: var(--red); }
-    .badge-gray { background: rgba(156,163,175,.1); color: var(--gray); }
-    .badge-wb { background: rgba(74,222,128,.15); color: #4ade80; }
+    /* GUEST SCREEN */
+    #guest{background:#000;position:relative}
+    #guest-view-wrap{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#000}
+    #guest-canvas{display:block;max-width:100%;max-height:100%}
+    #guest-wb-wrap{flex:1;position:relative;overflow:hidden;display:none;align-items:center;justify-content:center;background:#fff}
+    #guest-wb-wrap.on{display:flex}
+    #guest-wb-canvas{display:block}
+    .guest-waiting{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--gray);font-size:14px;text-align:center;padding:24px;z-index:2}
+    .guest-waiting.hidden{display:none}
+    .guest-bar{display:flex;align-items:center;justify-content:space-between;padding:0;background:rgba(11,30,61,.97);border-top:1px solid var(--border);flex-shrink:0}
+    .guest-input-wrap{display:flex;flex:1;gap:0}
+    .guest-input{flex:1;background:var(--card);border:none;border-right:1px solid var(--border);color:var(--white);padding:11px 14px;font-size:14px;outline:none;-webkit-user-select:text;user-select:text}
+    .guest-input::placeholder{color:var(--gray)}
+    .guest-send{background:var(--blue);border:none;color:var(--white);padding:11px 16px;font-size:14px;cursor:pointer;font-weight:600;flex-shrink:0}
+    .guest-send:active{opacity:.8}
+    .guest-label{background:rgba(192,132,252,.18);color:#c084fc;font-size:10px;font-weight:600;padding:3px 12px;border-radius:20px;border:1px solid rgba(192,132,252,.3);position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:3;pointer-events:none}
+    .guest-sent-toast{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(34,197,94,.9);color:var(--white);padding:7px 16px;border-radius:20px;font-size:12px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:10}
+    .guest-sent-toast.show{opacity:1}
+    .page-nav-guest{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:rgba(11,30,61,.9);backdrop-filter:blur(8px);padding:5px 12px;border-radius:20px;border:1px solid var(--border)}
+    .page-nav-guest span{font-size:11px;color:var(--gray);min-width:50px;text-align:center}
+    .guest-info{padding:5px 12px;font-size:10px;color:var(--gray);text-align:center;background:rgba(11,30,61,.6);flex-shrink:0}
 
-    /* ── PRESENTER ── */
-    #presenter { background: #000; position: relative; }
-    #pdf-wrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-    #pdf-canvas { display: block; }
-    #overlay-canvas { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none; }
+    /* WAITING */
+    .waiting{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--gray);font-size:14px;text-align:center;padding:24px;z-index:2;pointer-events:none}
+    .waiting.hidden{display:none}
+    .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(11,30,61,.96);border:1px solid var(--border);color:var(--white);padding:8px 18px;border-radius:24px;font-size:12px;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+    .toast.show{opacity:1}
+    :fullscreen .top-bar{display:none}
+    :fullscreen .slide-nav,.fullscreen .mode-bar{display:none}
 
-    /* WHITEBOARD on presenter */
-    #wb-canvas-pres { display: block; cursor: default; }
-    #wb-wrap { flex: 1; position: relative; overflow: hidden; display: none; align-items: center; justify-content: center; background: #fff; }
-    #wb-wrap.active { display: flex; }
-
-    .page-nav { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; background: rgba(11,30,61,.92); backdrop-filter: blur(8px); padding: 7px 14px; border-radius: 24px; border: 1px solid var(--border); }
-    .page-nav button { background: none; border: none; color: var(--white); cursor: pointer; font-size: 18px; padding: 2px 5px; }
-    .page-nav span { font-size: 12px; color: var(--gray); min-width: 56px; text-align: center; }
-
-    /* QR panel */
-    #qr-panel { position: absolute; top: 54px; right: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; width: 196px; z-index: 20; }
-    #qr-panel.hidden { display: none; }
-    #qr-panel .qr-title { font-size: 11px; color: var(--gray); margin-bottom: 8px; text-align: center; }
-    #qr-panel .room-code { font-size: 20px; font-weight: 700; color: var(--lblue); letter-spacing: 4px; text-align: center; margin-bottom: 8px; }
-    #qrcode { display: flex; justify-content: center; }
-    #qrcode canvas, #qrcode img { border-radius: 6px; }
-    #qr-panel .qr-hint { font-size: 10px; color: var(--gray); text-align: center; margin-top: 6px; line-height: 1.5; }
-    .upload-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: var(--dark); z-index: 5; }
-    .upload-overlay p { color: var(--gray); font-size: 13px; }
-
-    /* WB mode switcher (presenter bar) */
-    #mode-pill { display: flex; gap: 0; background: rgba(255,255,255,.07); border-radius: 6px; overflow: hidden; border: 1px solid var(--border); flex-shrink: 0; }
-    #mode-pill button { padding: 4px 10px; font-size: 11px; font-weight: 600; border: none; background: transparent; color: var(--gray); cursor: pointer; }
-    #mode-pill button.active { background: var(--blue); color: var(--white); }
-
-    /* ── DRAWER ── */
-    #drawer { background: #111; }
-    #draw-wrap { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #111; touch-action: none; }
-    #page-bg { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); display: block; }
-    #draw-canvas { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); touch-action: none; cursor: crosshair; }
-
-    /* Whiteboard draw mode */
-    #wb-draw-wrap { flex: 1; position: relative; overflow: hidden; display: none; align-items: center; justify-content: center; background: #fff; touch-action: none; }
-    #wb-draw-wrap.active { display: flex; }
-    #wb-canvas-draw { display: block; touch-action: none; cursor: crosshair; }
-
-    /* toolbar */
-    .toolbar { display: flex; align-items: center; justify-content: center; padding: 8px 10px; background: rgba(11,30,61,.98); border-top: 1px solid var(--border); flex-shrink: 0; gap: 5px; flex-wrap: wrap; }
-    .color-btn { width: 28px; height: 28px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: transform .1s; flex-shrink: 0; }
-    .color-btn.active { border-color: var(--white); transform: scale(1.22); }
-    .tool-btn { background: var(--card); border: 1px solid var(--border); color: var(--white); border-radius: 7px; padding: 5px 9px; font-size: 12px; cursor: pointer; transition: background .15s; white-space: nowrap; }
-    .tool-btn.active { background: var(--blue); border-color: var(--blue); }
-    .size-btn { background: var(--card); border: 1px solid var(--border); color: var(--white); border-radius: 7px; padding: 5px 9px; font-size: 11px; cursor: pointer; }
-    .size-btn.active { background: var(--blue); }
-    .toolbar-sep { width: 1px; height: 26px; background: var(--border); flex-shrink: 0; }
-
-    /* WB extra color row */
-    .wb-black { background: #111; border: 1px solid #444; }
-
-    /* waiting / spinner */
-    .waiting-msg { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--gray); font-size: 14px; text-align: center; padding: 24px; z-index: 2; pointer-events: none; }
-    .waiting-msg.hidden { display: none; }
-    .spinner { width: 34px; height: 34px; border: 3px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* WB label badge */
-    .wb-label { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(74,222,128,.18); color: #4ade80; font-size: 11px; font-weight: 600; padding: 3px 12px; border-radius: 20px; pointer-events: none; z-index: 3; border: 1px solid rgba(74,222,128,.3); }
-
-    .toast { position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%); background: rgba(11,30,61,.96); border: 1px solid var(--border); color: var(--white); padding: 9px 18px; border-radius: 24px; font-size: 12px; z-index: 100; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; }
-    .toast.show { opacity: 1; }
+    /* PASSWORD MODAL */
+    .pw-overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+    .pw-overlay.hidden{display:none}
+    .pw-box{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;width:100%;max-width:320px}
+    .pw-icon{font-size:28px;text-align:center;margin-bottom:8px}
+    .pw-title{font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px;text-align:center}
+    .pw-sub{font-size:12px;color:var(--gray);margin-bottom:18px;line-height:1.55;text-align:center}
+    .pw-label{font-size:11px;color:var(--gray);margin-bottom:5px;display:block;letter-spacing:.5px}
+    .pw-field{position:relative;margin-bottom:12px}
+    .pw-input{width:100%;background:rgba(255,255,255,.07);border:1px solid var(--border);color:var(--white);padding:11px 40px 11px 14px;border-radius:8px;font-size:15px;outline:none;-webkit-user-select:text;user-select:text}
+    .pw-input:focus{border-color:var(--blue)}
+    .pw-input::placeholder{color:var(--gray);font-size:13px}
+    .pw-input.code{letter-spacing:4px;text-align:center}
+    .pw-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--gray);cursor:pointer;font-size:15px;padding:4px}
+    .pw-err{font-size:12px;color:var(--red);margin:-6px 0 10px;display:none}
+    .pw-err.show{display:block}
+    .pw-hint{font-size:11px;color:var(--gray);margin-top:12px;line-height:1.5;text-align:center}
+    .pw-divider{display:flex;align-items:center;gap:8px;margin:12px 0}
+    .pw-divider span{font-size:11px;color:var(--gray);white-space:nowrap}
+    .pw-divider::before,.pw-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+    .pw-skip{width:100%;padding:9px;background:transparent;border:1px solid var(--border);color:var(--gray);border-radius:8px;font-size:13px;cursor:pointer;margin-bottom:8px}
+    .pw-skip:hover{border-color:var(--lblue);color:var(--lblue)}
+    .pw-actions{display:flex;gap:8px;margin-top:4px}
+    .pw-actions .btn{flex:1;padding:10px}
   </style>
 </head>
 <body>
 
-<!-- ═══════════════ HOME ═══════════════ -->
+<!-- PASSWORD MODAL -->
+<div class="pw-overlay hidden" id="pw-overlay">
+  <div class="pw-box">
+    <div class="pw-icon" id="pw-icon">🔒</div>
+    <div class="pw-title" id="pw-title">Set Room Password</div>
+    <div class="pw-sub"  id="pw-sub">Protect your session. Annotators must enter this password to join.</div>
+    <div id="pw-body"></div>
+    <div class="pw-err" id="pw-err"></div>
+    <div class="pw-hint" id="pw-hint">Guests (view-only) do not need a password.</div>
+  </div>
+</div>
+
+<!-- HOME -->
 <div id="home" class="screen active">
   <div class="home-logo">📄✏️</div>
-  <div class="home-title">PDF Live Annotator</div>
-  <div class="home-sub">Annotate PDF or use Whiteboard in real-time from tablet — present to projector via laptop.</div>
-
+  <div class="home-title">Live Annotator</div>
+  <div class="home-sub">Present, annotate, and take questions — real-time from any device.</div>
   <div class="home-btns">
-    <button class="btn btn-primary" onclick="startPresenter('pdf')">🖥️ &nbsp;Presenter — PDF Mode</button>
-    <button class="btn btn-wb"      onclick="startPresenter('wb')"> 🟩 &nbsp;Presenter — Whiteboard Mode</button>
-    <button class="btn btn-secondary" onclick="showJoinForm()">      📱 &nbsp;Join as Annotator (Tablet)</button>
+    <button class="btn btn-primary" onclick="openPresenterPw('pdf')">🖥️ &nbsp;Presenter — PDF / PPT Mode</button>
+    <button class="btn btn-wb"      onclick="openPresenterPw('wb')"> 🟩 &nbsp;Presenter — Whiteboard Mode</button>
+    <button class="btn btn-secondary" onclick="openAnnotatorPw()">   📱 &nbsp;Join as Annotator</button>
+    <button class="btn btn-guest"     onclick="showJoinForm('guest')">👁️ &nbsp;Join as Guest (view only)</button>
   </div>
-
   <div id="join-section">
     <div class="join-form">
       <input id="room-input" type="text" placeholder="Enter 6-digit room code" maxlength="6" inputmode="numeric">
-      <button class="btn btn-primary"    onclick="joinDrawer()">🔗 &nbsp;Connect & Draw</button>
-      <button class="btn btn-secondary"  onclick="hideJoinForm()">✕ &nbsp;Cancel</button>
+      <button class="btn btn-primary"   onclick="confirmJoin()">🔗 &nbsp;Connect as Guest</button>
+      <button class="btn btn-secondary" onclick="hideJoinForm()">✕ &nbsp;Cancel</button>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════ PRESENTER ═══════════════ -->
+<!-- PRESENTER -->
 <div id="presenter" class="screen">
   <div class="top-bar">
     <span class="status-dot" id="pres-dot"></span>
-    <span class="bar-title"  id="pres-status">Waiting for annotator…</span>
-    <span id="pres-badge" class="badge badge-gray">No device</span>
-    <!-- mode switch pill -->
-    <div id="mode-pill">
-      <button id="pill-pdf" onclick="switchPresMode('pdf')">PDF</button>
+    <span class="bar-title"  id="pres-status">Waiting…</span>
+    <span id="pres-badge" class="badge badge-gray">0 connected</span>
+    <div class="mode-pill">
+      <button id="pill-pdf" onclick="switchPresMode('pdf')">PDF/PPT</button>
       <button id="pill-wb"  onclick="switchPresMode('wb')">WB</button>
     </div>
-    <button class="icon-btn" onclick="toggleQR()"             title="QR / Room Code">📱</button>
-    <button class="icon-btn" id="clear-btn" onclick="clearPresenter()" title="Clear">🗑️</button>
-    <button class="icon-btn" onclick="toggleFullscreen()"     title="Fullscreen">⛶</button>
-    <button class="icon-btn" onclick="goHome()"               title="Disconnect">✕</button>
+    <button class="icon-btn" onclick="toggleQR()"          title="QR">📱</button>
+    <button class="icon-btn" id="qa-toggle-pres" onclick="toggleQA('pres')" title="Questions">
+      💬<span class="q-count" id="q-count-pres" style="display:none">0</span>
+    </button>
+    <button class="icon-btn" onclick="clearPresenter()"    title="Clear">🗑️</button>
+    <button class="icon-btn" onclick="toggleFullscreen()"  title="Fullscreen">⛶</button>
+    <button class="icon-btn" onclick="goHome()"            title="Exit">✕</button>
   </div>
 
-  <!-- PDF view -->
   <div id="pdf-wrap">
     <canvas id="pdf-canvas"></canvas>
     <canvas id="overlay-canvas"></canvas>
     <div class="upload-overlay" id="upload-overlay">
-      <p>📂 Select a PDF to present</p>
-      <button class="btn btn-primary" onclick="document.getElementById('pdf-file').click()">Choose PDF File</button>
+      <p>📂 Load your content</p>
+      <div class="upload-btns">
+        <button class="btn btn-primary" onclick="document.getElementById('pdf-file').click()">📄 PDF</button>
+        <button class="btn btn-wb"      onclick="document.getElementById('img-file').click()">📊 PPT (as images)</button>
+      </div>
+      <p>For PPT: Export slides as PNG in PowerPoint,<br>then select all images here.</p>
       <input type="file" id="pdf-file" accept="application/pdf" style="display:none" onchange="loadPDF(this)">
+      <input type="file" id="img-file" accept="image/*" multiple style="display:none" onchange="loadImages(this)">
     </div>
   </div>
-
-  <!-- Whiteboard view -->
   <div id="wb-wrap">
-    <div class="wb-label">Whiteboard Mode</div>
+    <div class="wb-label">Whiteboard</div>
     <canvas id="wb-canvas-pres"></canvas>
   </div>
-
   <div class="page-nav" id="page-nav" style="display:none">
     <button onclick="changePage(-1)">‹</button>
-    <span id="page-info">Page 1 / 1</span>
+    <span id="page-info">Slide 1/1</span>
     <button onclick="changePage(+1)">›</button>
   </div>
-
   <div id="qr-panel" class="hidden">
-    <div class="qr-title">Scan or enter code on tablet</div>
+    <div class="qr-title">Room code — share with everyone</div>
     <div class="room-code" id="room-code-display"></div>
     <div id="qrcode"></div>
-    <div class="qr-hint">Open this app on tablet, tap "Join as Annotator" and enter the code</div>
+    <div class="qr-hint">Annotator → Join as Annotator<br>Guest → Join as Guest</div>
+  </div>
+
+  <!-- Q&A panel -->
+  <div class="qa-panel" id="qa-panel-pres">
+    <div class="qa-header">
+      <div><div class="qa-header-title">💬 Guest Questions</div><div class="qa-header-sub" id="pres-q-sub">No questions yet</div></div>
+      <button class="icon-btn" onclick="toggleQA('pres')">✕</button>
+    </div>
+    <div class="qa-list" id="qa-list-pres"><div class="qa-empty">No questions yet.<br>Guests can submit questions from their screen.</div></div>
+    <button class="qa-clear-btn" onclick="clearQuestions()">🗑 Clear all questions</button>
   </div>
 </div>
 
-<!-- ═══════════════ DRAWER (TABLET) ═══════════════ -->
+<!-- DRAWER (ANNOTATOR) -->
 <div id="drawer" class="screen">
   <div class="top-bar">
     <span class="status-dot" id="draw-dot"></span>
     <span class="bar-title"  id="draw-status">Connecting…</span>
     <span id="draw-mode-badge" class="badge badge-gray">—</span>
-    <button class="icon-btn" onclick="requestPage(-1)">‹</button>
-    <span id="draw-page-info" style="font-size:11px;color:var(--gray);white-space:nowrap">p1/1</span>
-    <button class="icon-btn" onclick="requestPage(+1)">›</button>
+    <button class="icon-btn" id="qa-toggle-draw" onclick="toggleQA('draw')" title="Questions">
+      💬<span class="q-count" id="q-count-draw" style="display:none">0</span>
+    </button>
     <button class="icon-btn" onclick="undoStroke()"  title="Undo">↩</button>
-    <button class="icon-btn" onclick="goHome()"      title="Disconnect">✕</button>
+    <button class="icon-btn" onclick="goFullscreen()" title="Fullscreen">⛶</button>
+    <button class="icon-btn" onclick="goHome()"       title="Exit">✕</button>
   </div>
-
-  <!-- PDF draw mode -->
+  <div class="mode-bar">
+    <button class="mode-bar-btn on" id="mb-pdf" onclick="drawerRequestMode('pdf')">📄 PDF/PPT</button>
+    <button class="mode-bar-btn"    id="mb-wb"  onclick="drawerRequestMode('wb')">🟩 Whiteboard</button>
+  </div>
+  <div class="slide-nav" id="slide-nav">
+    <button class="slide-btn" onclick="requestPage(-1)">‹</button>
+    <div class="slide-info">
+      <div class="pg-num"   id="draw-pg-num">1</div>
+      <div class="pg-total" id="draw-pg-total">/ 1 slides</div>
+    </div>
+    <button class="slide-btn" onclick="requestPage(+1)">›</button>
+  </div>
   <div id="draw-wrap">
     <img id="page-bg" alt="">
     <canvas id="draw-canvas"></canvas>
-    <div class="waiting-msg" id="draw-waiting">
-      <div class="spinner"></div>
-      <span>Waiting for presenter to load PDF…</span>
-    </div>
+    <div class="waiting" id="draw-waiting"><div class="spinner"></div><span>Waiting for presenter…</span></div>
   </div>
-
-  <!-- Whiteboard draw mode -->
   <div id="wb-draw-wrap">
-    <div class="wb-label">Whiteboard — draw freely</div>
+    <div class="wb-label">Whiteboard</div>
     <canvas id="wb-canvas-draw"></canvas>
   </div>
-
-  <!-- toolbar shared for both modes -->
   <div class="toolbar">
-    <!-- colors -->
-    <div class="color-btn active" data-color="#EF4444" style="background:#EF4444" onclick="setColor(this)"></div>
-    <div class="color-btn" data-color="#3B82F6" style="background:#3B82F6" onclick="setColor(this)"></div>
-    <div class="color-btn" data-color="#22C55E" style="background:#22C55E" onclick="setColor(this)"></div>
-    <div class="color-btn" data-color="#EAB308" style="background:#EAB308" onclick="setColor(this)"></div>
-    <div class="color-btn" data-color="#A855F7" style="background:#A855F7" onclick="setColor(this)"></div>
-    <div class="color-btn wb-black" data-color="#111111" onclick="setColor(this)"></div>
-    <div class="color-btn" data-color="#FFFFFF" style="background:#FFFFFF" onclick="setColor(this)"></div>
-    <div class="toolbar-sep"></div>
-    <!-- sizes -->
-    <button class="size-btn active" data-size="3"  onclick="setSize(this)">S</button>
-    <button class="size-btn"        data-size="7"  onclick="setSize(this)">M</button>
-    <button class="size-btn"        data-size="14" onclick="setSize(this)">L</button>
-    <div class="toolbar-sep"></div>
+    <div class="color-btn on" data-color="#EF4444" style="background:#EF4444" onclick="setColor(this)"></div>
+    <div class="color-btn"    data-color="#3B82F6" style="background:#3B82F6" onclick="setColor(this)"></div>
+    <div class="color-btn"    data-color="#22C55E" style="background:#22C55E" onclick="setColor(this)"></div>
+    <div class="color-btn"    data-color="#EAB308" style="background:#EAB308" onclick="setColor(this)"></div>
+    <div class="color-btn"    data-color="#A855F7" style="background:#A855F7" onclick="setColor(this)"></div>
+    <div class="color-btn"    data-color="#111"    style="background:#111;border:1px solid #555" onclick="setColor(this)"></div>
+    <div class="color-btn"    data-color="#FFF"    style="background:#FFF" onclick="setColor(this)"></div>
+    <div class="tb-sep"></div>
+    <button class="size-btn on" data-size="3"  onclick="setSize(this)">S</button>
+    <button class="size-btn"    data-size="7"  onclick="setSize(this)">M</button>
+    <button class="size-btn"    data-size="14" onclick="setSize(this)">L</button>
+    <div class="tb-sep"></div>
     <button class="tool-btn" id="eraser-btn" onclick="toggleEraser()">⌫</button>
-    <button class="tool-btn" onclick="clearCurrentPage()">🗑 Clear</button>
+    <button class="tool-btn" onclick="clearCurrentPage()">🗑</button>
+  </div>
+
+  <!-- Q&A panel for annotator -->
+  <div class="qa-panel" id="qa-panel-draw">
+    <div class="qa-header">
+      <div><div class="qa-header-title">💬 Guest Questions</div><div class="qa-header-sub" id="draw-q-sub">No questions yet</div></div>
+      <button class="icon-btn" onclick="toggleQA('draw')">✕</button>
+    </div>
+    <div class="qa-list" id="qa-list-draw"><div class="qa-empty">No questions yet.</div></div>
+    <button class="qa-clear-btn" onclick="clearQuestions()">🗑 Clear all</button>
+  </div>
+</div>
+
+<!-- GUEST SCREEN -->
+<div id="guest" class="screen">
+  <div class="top-bar">
+    <span class="status-dot" id="guest-dot"></span>
+    <span class="bar-title"  id="guest-status">Connecting…</span>
+    <span id="guest-badge" class="badge badge-guest">Guest</span>
+    <span id="guest-pg-info" style="font-size:11px;color:var(--gray)"></span>
+  </div>
+  <div id="guest-view-wrap">
+    <div class="guest-label">👁 View Only</div>
+    <canvas id="guest-canvas"></canvas>
+    <div class="guest-waiting" id="guest-waiting"><div class="spinner"></div><span>Waiting for presenter to start…</span></div>
+    <div class="guest-sent-toast" id="guest-sent-toast">✅ Question sent!</div>
+  </div>
+  <div id="guest-wb-wrap">
+    <div class="guest-label">👁 Whiteboard — View Only</div>
+    <canvas id="guest-wb-canvas"></canvas>
+  </div>
+  <div class="guest-info">You are in view-only mode. Type a question below to send to the presenter.</div>
+  <div class="guest-bar">
+    <div class="guest-input-wrap">
+      <input class="guest-input" id="guest-q-input" type="text" placeholder="Ask a question…" maxlength="200">
+      <button class="guest-send" onclick="sendQuestion()">Send ✉</button>
+    </div>
   </div>
 </div>
 
@@ -250,323 +363,447 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+// DISABLE RIGHT CLICK + DEV SHORTCUTS
+document.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('keydown',e=>{
+  if(e.key==='F12'){e.preventDefault();return}
+  if(e.ctrlKey&&['u','s','p'].includes(e.key.toLowerCase())){e.preventDefault();return}
+  if(e.ctrlKey&&e.shiftKey&&['i','j','c'].includes(e.key.toLowerCase())){e.preventDefault()}
+});
 
-// ── STATE ──
-let peer=null, conn=null;
-let pdfDoc=null, currentPage=1, totalPages=1;
-let annotations={};          // PDF annotations per page
-let wbStrokes=[];             // Whiteboard strokes (shared, no pages)
-let currentStroke=null;
-let drawColor='#EF4444', drawWidth=3, isEraser=false;
-let presMode='pdf';           // 'pdf' | 'wb'
-let drawerMode='pdf';         // follows what presenter sends
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-// ── SCREENS ──
-function showScreen(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
+// STATE
+let presenterPeer=null;
+let annotatorConn=null;    // single annotator connection
+let guestConns=new Map();  // peerId → conn
+let guestCounter=0;
 
+let clientPeer=null,clientConn=null;
+let myRole='';             // 'annotator' | 'guest'
+let pendingJoinRole='';
+
+let pdfDoc=null,imgSlides=[],currentPage=1,totalPages=1,contentType='none';
+let annotations={},wbStrokes=[],currentStroke=null;
+let drawColor='#EF4444',drawWidth=3,isEraser=false;
+let presMode='pdf',drawerMode='pdf';
+let questions=[]; // {id,guestId,guestNum,text,time}
+let unreadQ=0;
+
+// SCREENS
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
 function goHome(){
-  if(conn){try{conn.close();}catch(e){}conn=null;}
-  if(peer){try{peer.destroy();}catch(e){}peer=null;}
-  pdfDoc=null; currentPage=1; totalPages=1; annotations={}; wbStrokes=[];
-  // reset presenter UI
+  if(annotatorConn){try{annotatorConn.close()}catch(e){}annotatorConn=null}
+  guestConns.forEach(c=>{try{c.close()}catch(e){}});guestConns.clear();guestCounter=0;
+  if(presenterPeer){try{presenterPeer.destroy()}catch(e){}presenterPeer=null}
+  if(clientConn){try{clientConn.close()}catch(e){}clientConn=null}
+  if(clientPeer){try{clientPeer.destroy()}catch(e){}clientPeer=null}
+  pdfDoc=null;imgSlides=[];currentPage=1;totalPages=1;contentType='none';
+  annotations={};wbStrokes=[];questions=[];unreadQ=0;myRole='';
   document.getElementById('upload-overlay').style.display='flex';
   document.getElementById('page-nav').style.display='none';
   document.getElementById('qr-panel').classList.add('hidden');
   document.getElementById('qrcode').innerHTML='';
-  document.getElementById('pres-dot').className='status-dot';
-  document.getElementById('pres-status').textContent='Waiting for annotator…';
-  document.getElementById('pres-badge').className='badge badge-gray';
-  document.getElementById('pres-badge').textContent='No device';
-  // reset drawer UI
+  ['pres-dot','draw-dot','guest-dot'].forEach(id=>{const el=document.getElementById(id);if(el)el.className='status-dot'});
   document.getElementById('draw-waiting').classList.remove('hidden');
+  document.getElementById('guest-waiting').classList.remove('hidden');
   document.getElementById('page-bg').src='';
-  clearDrawCanvas();
-  clearWbDrawCanvas();
+  clearDrawCanvas();clearWbDrawCanvas();
   document.getElementById('draw-wrap').style.display='flex';
-  document.getElementById('wb-draw-wrap').classList.remove('active');
+  document.getElementById('wb-draw-wrap').classList.remove('on');
+  document.getElementById('guest-view-wrap').style.display='flex';
+  document.getElementById('guest-wb-wrap').classList.remove('on');
+  if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
   showScreen('home');
 }
 
 let toastTimer;
-function toast(msg,ms=2500){
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>t.classList.remove('show'),ms);
-}
+function toast(msg,ms=2500){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),ms)}
 
-// ── HOME ──
-function showJoinForm(){
+// HOME
+function showJoinForm(role){
+  pendingJoinRole=role;
   document.getElementById('join-section').style.display='flex';
   document.getElementById('room-input').focus();
 }
-function hideJoinForm(){
-  document.getElementById('join-section').style.display='none';
+function hideJoinForm(){document.getElementById('join-section').style.display='none'}
+function confirmJoin(){
+  const code=document.getElementById('room-input').value.trim();
+  if(!code||code.length<4){toast('Enter a valid code');return}
+  if(pendingJoinRole==='annotator')startDrawer(code);
+  else startGuest(code);
 }
-document.getElementById('room-input').addEventListener('keyup',e=>{if(e.key==='Enter')joinDrawer();});
+document.getElementById('room-input').addEventListener('keyup',e=>{if(e.key==='Enter')confirmJoin()});
+document.getElementById('guest-q-input').addEventListener('keyup',e=>{if(e.key==='Enter')sendQuestion()});
 
-// ── PRESENTER: SETUP ──
+// UPDATE CONNECTION COUNT BADGE
+function updatePresenterBadge(){
+  const total=(annotatorConn?1:0)+guestConns.size;
+  const el=document.getElementById('pres-badge');
+  if(total===0){el.className='badge badge-gray';el.textContent='0 connected'}
+  else{el.className='badge badge-green';el.textContent=`${total} connected`}
+  const dot=document.getElementById('pres-dot');
+  dot.className=total>0?'status-dot online':'status-dot';
+  document.getElementById('pres-status').textContent=total>0?`${annotatorConn?1:0} annotator · ${guestConns.size} guest(s)`:'Waiting…';
+}
+
+// PRESENTER SETUP
 function startPresenter(mode){
-  presMode=mode;
-  showScreen('presenter');
-  // show correct view
-  switchPresMode(mode);
-
-  const roomCode=Math.floor(100000+Math.random()*900000).toString();
-  document.getElementById('room-code-display').textContent=roomCode;
-
-  peer=new Peer(roomCode,{host:'0.peerjs.com',port:443,secure:true,path:'/'});
-  peer.on('error',err=>{
-    if(err.type==='unavailable-id'){startPresenter(mode);}
-    else toast('⚠️ Connection error: '+err.type);
-  });
-  peer.on('open',id=>{
-    document.getElementById('room-code-display').textContent=id;
-    generateQR(id); showQR();
-  });
-  peer.on('connection',c=>{
-    conn=c;
-    document.getElementById('pres-dot').className='status-dot online';
-    document.getElementById('pres-status').textContent='Annotator connected ✓';
-    document.getElementById('pres-badge').className='badge badge-green';
-    document.getElementById('pres-badge').textContent='Connected';
-    toast('📱 Annotator connected!');
-    conn.on('data',handlePresenterData);
-    conn.on('close',()=>{
-      document.getElementById('pres-dot').className='status-dot';
-      document.getElementById('pres-status').textContent='Annotator disconnected';
-      document.getElementById('pres-badge').className='badge badge-red';
-      document.getElementById('pres-badge').textContent='Offline';
-      toast('Annotator disconnected');
+  presMode=mode;showScreen('presenter');switchPresMode(mode);
+  const code=Math.floor(100000+Math.random()*900000).toString();
+  document.getElementById('room-code-display').textContent=code;
+  presenterPeer=new Peer(code,{host:'0.peerjs.com',port:443,secure:true,path:'/'});
+  presenterPeer.on('error',err=>{if(err.type==='unavailable-id')startPresenter(mode);else toast('⚠️ '+err.type)});
+  presenterPeer.on('open',id=>{document.getElementById('room-code-display').textContent=id;generateQR(id);showQR()});
+  presenterPeer.on('connection',c=>{
+    c.on('open',()=>{c.send({type:'hello_from_presenter',presMode})});
+    c.on('data',d=>{
+      if(d.type==='identify'){
+        if(d.role==='annotator'){
+          // PASSWORD CHECK
+          if(presPassword&&d.password!==presPassword){
+            c.send({type:'auth_failed',reason:'Wrong password. Please check with the presenter.'});
+            setTimeout(()=>{try{c.close()}catch(e){}},500);
+            return;
+          }
+          annotatorConn=c;updatePresenterBadge();toast('📱 Annotator joined!');
+          c.send({type:'mode_set',mode:presMode});
+          if(presMode==='pdf'&&(pdfDoc||imgSlides.length))sendPageToConn(c);
+          else if(presMode==='wb'){initWbPresCanvas();sendWbSnapshot()}
+          // send existing questions to annotator
+          if(questions.length)c.send({type:'all_questions',questions});
+          c.on('close',()=>{annotatorConn=null;updatePresenterBadge();toast('Annotator left')});
+        } else if(d.role==='guest'){
+          guestCounter++;const gNum=guestCounter;guestConns.set(c.peer,c);
+          c.send({type:'mode_set',mode:presMode,guestNum:gNum});
+          if(presMode==='pdf'&&(pdfDoc||imgSlides.length))sendPageToConn(c,true);
+          else if(presMode==='wb')sendWbSnapshotToConn(c);
+          updatePresenterBadge();toast(`👁 Guest #${gNum} joined`);
+          c.on('close',()=>{guestConns.delete(c.peer);updatePresenterBadge();toast(`Guest #${gNum} left`)});
+        }
+      } else if(d.type==='question'){
+        const q={id:Date.now(),guestNum:d.guestNum,text:d.text,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})};
+        questions.push(q);
+        addQuestionToUI(q);
+        // forward to annotator
+        if(annotatorConn)annotatorConn.send({type:'new_question',question:q});
+        toast(`💬 Question from Guest #${d.guestNum}`);
+      } else {
+        handlePresenterDrawData(d); // drawing from annotator
+      }
     });
-    // announce current mode + send content
-    conn.send({type:'mode_set',mode:presMode});
-    if(presMode==='pdf'&&pdfDoc) sendPageToDrawer();
-    else if(presMode==='wb') sendWbSnapshot();
   });
 }
 
-// ── PRESENTER: MODE SWITCH ──
+// PRESENTER MODE SWITCH
 function switchPresMode(mode){
   presMode=mode;
-  const pdfWrap=document.getElementById('pdf-wrap');
-  const wbWrap=document.getElementById('wb-wrap');
-  document.getElementById('pill-pdf').classList.toggle('active',mode==='pdf');
-  document.getElementById('pill-wb').classList.toggle('active',mode==='wb');
-  document.getElementById('page-nav').style.display=(mode==='pdf'&&pdfDoc)?'flex':'none';
-
-  if(mode==='pdf'){
-    pdfWrap.style.display='flex'; wbWrap.classList.remove('active');
-    document.getElementById('pres-badge').className='badge badge-green';
-  } else {
-    pdfWrap.style.display='none'; wbWrap.classList.add('active');
-    document.getElementById('pres-badge').className='badge badge-wb';
-    initWbPresCanvas();
-  }
-  if(conn){
-    conn.send({type:'mode_set',mode});
-    if(mode==='pdf'&&pdfDoc) sendPageToDrawer();
-    else if(mode==='wb') sendWbSnapshot();
-  }
+  document.getElementById('pill-pdf').classList.toggle('on',mode==='pdf');
+  document.getElementById('pill-wb').classList.toggle('on',mode==='wb');
+  document.getElementById('pdf-wrap').style.display=mode==='pdf'?'flex':'none';
+  document.getElementById('wb-wrap').classList.toggle('on',mode==='wb');
+  document.getElementById('page-nav').style.display=(mode==='pdf'&&totalPages>1)?'flex':'none';
+  if(mode==='wb')initWbPresCanvas();
+  const msg={type:'mode_set',mode};
+  if(annotatorConn)annotatorConn.send(msg);
+  guestConns.forEach(c=>c.send(msg));
+  if(mode==='pdf'&&(pdfDoc||imgSlides.length)){sendPageToConn(annotatorConn);guestConns.forEach(c=>sendPageToConn(c,true))}
+  else if(mode==='wb'){sendWbSnapshot();guestConns.forEach(c=>sendWbSnapshotToConn(c))}
 }
 
-// ── PRESENTER: QR ──
+// QR
 function generateQR(code){
   document.getElementById('qrcode').innerHTML='';
   const url=`${location.href.split('#')[0]}#join=${code}`;
-  new QRCode(document.getElementById('qrcode'),{text:url,width:148,height:148,colorDark:'#0B1E3D',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M});
+  new QRCode(document.getElementById('qrcode'),{text:url,width:148,height:148,colorDark:'#0B1E3D',colorLight:'#FFF',correctLevel:QRCode.CorrectLevel.M});
 }
-function showQR(){document.getElementById('qr-panel').classList.remove('hidden');}
-function toggleQR(){document.getElementById('qr-panel').classList.toggle('hidden');}
+function showQR(){document.getElementById('qr-panel').classList.remove('hidden')}
+function toggleQR(){document.getElementById('qr-panel').classList.toggle('hidden')}
 
-// ── PRESENTER: PDF ──
+// Q&A UI
+function addQuestionToUI(q){
+  const html=`<div class="qa-item new" id="qi-${q.id}"><div class="qa-item-meta"><span>Guest #${q.guestNum}</span><span>${q.time}</span></div><div class="qa-item-text">${escHtml(q.text)}</div></div>`;
+  ['pres','draw'].forEach(t=>{
+    const list=document.getElementById('qa-list-'+t);
+    const empty=list.querySelector('.qa-empty');if(empty)empty.remove();
+    list.insertAdjacentHTML('afterbegin',html.replace('qi-'+q.id,'qi-'+q.id+'-'+t));
+  });
+  unreadQ++;
+  ['pres','draw'].forEach(t=>{
+    const el=document.getElementById('q-count-'+t);
+    el.textContent=unreadQ;el.style.display='flex';
+  });
+  ['pres-q-sub','draw-q-sub'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=questions.length+' question(s)'});
+  // fade new highlight after 3s
+  setTimeout(()=>{document.querySelectorAll('.qa-item.new').forEach(el=>el.classList.remove('new'))},3000);
+}
+
+function toggleQA(who){
+  const panel=document.getElementById('qa-panel-'+who);
+  panel.classList.toggle('open');
+  if(panel.classList.contains('open')){
+    unreadQ=0;
+    ['pres','draw'].forEach(t=>{const el=document.getElementById('q-count-'+t);if(el)el.style.display='none'});
+  }
+}
+
+function clearQuestions(){
+  questions=[];
+  ['pres','draw'].forEach(t=>{
+    const list=document.getElementById('qa-list-'+t);
+    list.innerHTML='<div class="qa-empty">No questions yet.</div>';
+    const sub=document.getElementById(t+'-q-sub');if(sub)sub.textContent='No questions yet';
+    const c=document.getElementById('q-count-'+t);if(c)c.style.display='none';
+  });
+  unreadQ=0;
+  if(annotatorConn)annotatorConn.send({type:'all_questions',questions:[]});
+}
+
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+// PDF / IMAGE LOADING
 async function loadPDF(input){
-  const file=input.files[0]; if(!file)return;
+  const file=input.files[0];if(!file)return;
   document.getElementById('upload-overlay').style.display='none';
   const buf=await file.arrayBuffer();
   pdfDoc=await pdfjsLib.getDocument({data:buf}).promise;
-  totalPages=pdfDoc.numPages; currentPage=1; annotations={};
-  document.getElementById('page-nav').style.display='flex';
+  imgSlides=[];contentType='pdf';totalPages=pdfDoc.numPages;currentPage=1;annotations={};
+  document.getElementById('page-nav').style.display=totalPages>1?'flex':'none';
   await renderPresenterPage(currentPage);
-  if(conn){conn.send({type:'mode_set',mode:'pdf'});sendPageToDrawer();}
+  broadcastModeAndPage();
+}
+async function loadImages(input){
+  const files=Array.from(input.files);if(!files.length)return;
+  files.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+  document.getElementById('upload-overlay').style.display='none';
+  pdfDoc=null;contentType='images';
+  imgSlides=await Promise.all(files.map(f=>new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(f)})));
+  totalPages=imgSlides.length;currentPage=1;annotations={};
+  document.getElementById('page-nav').style.display=totalPages>1?'flex':'none';
+  await renderPresenterPage(currentPage);
+  broadcastModeAndPage();toast(`📊 ${totalPages} slides loaded!`);
+}
+function broadcastModeAndPage(){
+  const msg={type:'mode_set',mode:'pdf'};
+  if(annotatorConn){annotatorConn.send(msg);sendPageToConn(annotatorConn)}
+  guestConns.forEach(c=>{c.send(msg);sendPageToConn(c,true)});
 }
 
 const pdfCanvas=document.getElementById('pdf-canvas');
 const overlayCanvas=document.getElementById('overlay-canvas');
-
 async function renderPresenterPage(num){
-  const page=await pdfDoc.getPage(num);
   const wrap=document.getElementById('pdf-wrap');
-  const scale=Math.min(wrap.clientWidth/page.getViewport({scale:1}).width,
-                       wrap.clientHeight/page.getViewport({scale:1}).height)*0.97;
-  const vp=page.getViewport({scale});
-  pdfCanvas.width=vp.width; pdfCanvas.height=vp.height;
-  overlayCanvas.width=vp.width; overlayCanvas.height=vp.height;
-  await page.render({canvasContext:pdfCanvas.getContext('2d'),viewport:vp}).promise;
-  document.getElementById('page-info').textContent=`Page ${num} / ${totalPages}`;
+  if(contentType==='pdf'){
+    const page=await pdfDoc.getPage(num);
+    const scale=Math.min(wrap.clientWidth/page.getViewport({scale:1}).width,wrap.clientHeight/page.getViewport({scale:1}).height)*0.97;
+    const vp=page.getViewport({scale});
+    pdfCanvas.width=vp.width;pdfCanvas.height=vp.height;
+    overlayCanvas.width=vp.width;overlayCanvas.height=vp.height;
+    await page.render({canvasContext:pdfCanvas.getContext('2d'),viewport:vp}).promise;
+  } else if(contentType==='images'){
+    await new Promise(res=>{
+      const img=new Image();img.onload=()=>{
+        const scale=Math.min(wrap.clientWidth/img.width,wrap.clientHeight/img.height)*0.97;
+        pdfCanvas.width=Math.round(img.width*scale);pdfCanvas.height=Math.round(img.height*scale);
+        overlayCanvas.width=pdfCanvas.width;overlayCanvas.height=pdfCanvas.height;
+        pdfCanvas.getContext('2d').drawImage(img,0,0,pdfCanvas.width,pdfCanvas.height);res();
+      };img.src=imgSlides[num-1];
+    });
+  }
+  const label=contentType==='images'?'Slide':'Page';
+  document.getElementById('page-info').textContent=`${label} ${num}/${totalPages}`;
   redrawPdfAnnotations();
 }
 
 function redrawPdfAnnotations(){
-  const ctx=overlayCanvas.getContext('2d');
-  ctx.clearRect(0,0,overlayCanvas.width,overlayCanvas.height);
-  (annotations[currentPage]||[]).forEach(s=>drawStrokeOnCanvas(ctx,s,overlayCanvas.width,overlayCanvas.height));
+  const ctx=overlayCanvas.getContext('2d');ctx.clearRect(0,0,overlayCanvas.width,overlayCanvas.height);
+  (annotations[currentPage]||[]).forEach(s=>strokeOnCanvas(ctx,s,overlayCanvas.width,overlayCanvas.height));
 }
-
-function drawStrokeOnCanvas(ctx,s,W,H){
-  if(!s.pts||s.pts.length<1)return;
-  ctx.save();
-  ctx.globalCompositeOperation=s.eraser?'destination-out':'source-over';
-  ctx.strokeStyle=s.eraser?'rgba(0,0,0,1)':s.color;
-  ctx.lineWidth=s.width*Math.min(W,H)/100;
-  ctx.lineCap='round'; ctx.lineJoin='round';
-  ctx.beginPath();
-  ctx.moveTo(s.pts[0].x*W,s.pts[0].y*H);
-  s.pts.forEach(p=>ctx.lineTo(p.x*W,p.y*H));
-  ctx.stroke(); ctx.restore();
+function strokeOnCanvas(ctx,s,W,H){
+  if(!s.pts||!s.pts.length)return;
+  ctx.save();ctx.globalCompositeOperation=s.eraser?'destination-out':'source-over';
+  ctx.strokeStyle=s.eraser?'rgba(0,0,0,1)':s.color;ctx.fillStyle=ctx.strokeStyle;
+  ctx.lineWidth=s.width*Math.min(W,H)/100;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(s.pts[0].x*W,s.pts[0].y*H);s.pts.forEach(p=>ctx.lineTo(p.x*W,p.y*H));ctx.stroke();ctx.restore();
 }
 
 async function changePage(delta){
-  const next=currentPage+delta;
-  if(next<1||next>totalPages)return;
-  currentPage=next;
-  await renderPresenterPage(currentPage);
-  if(conn)sendPageToDrawer();
+  const next=currentPage+delta;if(next<1||next>totalPages)return;
+  currentPage=next;await renderPresenterPage(currentPage);
+  if(annotatorConn)sendPageToConn(annotatorConn);
+  guestConns.forEach(c=>sendPageToConn(c,true));
 }
 
-async function sendPageToDrawer(){
-  if(!conn||!pdfDoc)return;
-  const imgData=pdfCanvas.toDataURL('image/jpeg',0.8);
-  conn.send({type:'page_image',page:currentPage,total:totalPages,dataURL:imgData});
+async function sendPageToConn(c,guestOnly=false){
+  if(!c||c.open===false)return;
+  const d=pdfCanvas.toDataURL('image/jpeg',.82);
+  c.send({type:'page_image',page:currentPage,total:totalPages,dataURL:d,contentType,guestOnly});
 }
 
-// ── PRESENTER: WHITEBOARD ──
+// WHITEBOARD
 function initWbPresCanvas(){
   const wrap=document.getElementById('wb-wrap');
   const wc=document.getElementById('wb-canvas-pres');
-  wc.width=wrap.clientWidth; wc.height=wrap.clientHeight;
+  wc.width=wrap.clientWidth||800;wc.height=wrap.clientHeight||600;
   redrawWbPres();
 }
-
 function redrawWbPres(){
   const wc=document.getElementById('wb-canvas-pres');
-  const ctx=wc.getContext('2d');
-  ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,wc.width,wc.height);
-  wbStrokes.forEach(s=>drawStrokeOnCanvas(ctx,s,wc.width,wc.height));
+  const ctx=wc.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wc.width,wc.height);
+  wbStrokes.forEach(s=>strokeOnCanvas(ctx,s,wc.width,wc.height));
+}
+function sendWbSnapshot(){if(annotatorConn)sendWbSnapshotToConn(annotatorConn);guestConns.forEach(c=>sendWbSnapshotToConn(c))}
+function sendWbSnapshotToConn(c){
+  if(!c||c.open===false)return;
+  const wc=document.getElementById('wb-canvas-pres');if(!wc.width)return;
+  c.send({type:'wb_snapshot',dataURL:wc.toDataURL('image/jpeg',.75)});
 }
 
-function sendWbSnapshot(){
-  if(!conn)return;
-  const wc=document.getElementById('wb-canvas-pres');
-  if(!wc.width)return;
-  conn.send({type:'wb_snapshot',dataURL:wc.toDataURL('image/jpeg',0.75)});
-}
-
-// ── PRESENTER: RECEIVE ──
-function handlePresenterData(data){
+// PRESENTER HANDLE ANNOTATOR DATA
+function handlePresenterDrawData(data){
+  if(data.type==='request_mode'){switchPresMode(data.mode);return}
+  if(data.type==='page_request'){changePage(data.delta);return}
   if(presMode==='pdf'){
     if(!annotations[currentPage])annotations[currentPage]=[];
     const strokes=annotations[currentPage];
-    if(data.type==='stroke_begin'){
-      currentStroke={color:data.color,width:data.width,eraser:data.eraser,pts:[{x:data.x,y:data.y}]};
-      strokes.push(currentStroke);
-    } else if(data.type==='stroke_point'&&currentStroke){
-      currentStroke.pts.push({x:data.x,y:data.y});
-      redrawPdfAnnotations();
-    } else if(data.type==='stroke_end'){
-      currentStroke=null;
-    } else if(data.type==='clear_page'){
-      annotations[data.page]=[]; if(data.page===currentPage)redrawPdfAnnotations();
-    } else if(data.type==='undo'){
-      if(strokes.length){strokes.pop();redrawPdfAnnotations();}
-    } else if(data.type==='page_request'){
-      changePage(data.delta);
-    }
+    if(data.type==='stroke_begin'){currentStroke={color:data.color,width:data.width,eraser:data.eraser,pts:[{x:data.x,y:data.y}]};strokes.push(currentStroke)}
+    else if(data.type==='stroke_point'&&currentStroke){currentStroke.pts.push({x:data.x,y:data.y});redrawPdfAnnotations();broadcastWbUpdate(data)}
+    else if(data.type==='stroke_end'){currentStroke=null}
+    else if(data.type==='clear_page'){annotations[data.page]=[];if(data.page===currentPage)redrawPdfAnnotations()}
+    else if(data.type==='undo'){if(strokes.length){strokes.pop();redrawPdfAnnotations()}}
+    // after redraw send snapshot to guests
+    if(['stroke_end','clear_page','undo'].includes(data.type)){guestConns.forEach(c=>sendPageToConn(c,true))}
   } else {
-    // whiteboard mode
-    const wc=document.getElementById('wb-canvas-pres');
-    const ctx=wc.getContext('2d');
-    if(data.type==='stroke_begin'){
-      currentStroke={color:data.color,width:data.width,eraser:data.eraser,pts:[{x:data.x,y:data.y}]};
-      wbStrokes.push(currentStroke);
-    } else if(data.type==='stroke_point'&&currentStroke){
-      const p={x:data.x,y:data.y};
-      const last=currentStroke.pts[currentStroke.pts.length-1];
-      currentStroke.pts.push(p);
-      // incremental draw
-      ctx.save();
-      ctx.globalCompositeOperation=currentStroke.eraser?'destination-out':'source-over';
+    const wc=document.getElementById('wb-canvas-pres');const ctx=wc.getContext('2d');
+    if(data.type==='stroke_begin'){currentStroke={color:data.color,width:data.width,eraser:data.eraser,pts:[{x:data.x,y:data.y}]};wbStrokes.push(currentStroke)}
+    else if(data.type==='stroke_point'&&currentStroke){
+      const p={x:data.x,y:data.y},last=currentStroke.pts[currentStroke.pts.length-1];currentStroke.pts.push(p);
+      ctx.save();ctx.globalCompositeOperation=currentStroke.eraser?'destination-out':'source-over';
       ctx.strokeStyle=currentStroke.eraser?'rgba(0,0,0,1)':currentStroke.color;
-      ctx.lineWidth=currentStroke.width*Math.min(wc.width,wc.height)/100;
-      ctx.lineCap='round'; ctx.lineJoin='round';
-      ctx.beginPath();
-      ctx.moveTo(last.x*wc.width,last.y*wc.height);
-      ctx.lineTo(p.x*wc.width,p.y*wc.height);
-      ctx.stroke(); ctx.restore();
-    } else if(data.type==='stroke_end'){
-      currentStroke=null;
-    } else if(data.type==='wb_clear'){
-      wbStrokes=[]; redrawWbPres();
-    } else if(data.type==='undo'){
-      if(wbStrokes.length){wbStrokes.pop();redrawWbPres();}
+      ctx.lineWidth=currentStroke.width*Math.min(wc.width,wc.height)/100;ctx.lineCap='round';ctx.lineJoin='round';
+      ctx.beginPath();ctx.moveTo(last.x*wc.width,last.y*wc.height);ctx.lineTo(p.x*wc.width,p.y*wc.height);ctx.stroke();ctx.restore();
     }
+    else if(data.type==='stroke_end'){currentStroke=null;sendWbSnapshot()}
+    else if(data.type==='wb_clear'){wbStrokes=[];redrawWbPres();guestConns.forEach(c=>c.send({type:'wb_clear'}))}
+    else if(data.type==='undo'){if(wbStrokes.length){wbStrokes.pop();redrawWbPres();sendWbSnapshot()}}
   }
 }
+function broadcastWbUpdate(){}
 
 function clearPresenter(){
-  if(presMode==='pdf'){
-    annotations={};redrawPdfAnnotations();
-    if(conn)conn.send({type:'clear_all'});
-  } else {
-    wbStrokes=[];redrawWbPres();
-    if(conn)conn.send({type:'wb_clear'});
-    sendWbSnapshot();
-  }
+  if(presMode==='pdf'){annotations={};redrawPdfAnnotations();if(annotatorConn)annotatorConn.send({type:'clear_all'});guestConns.forEach(c=>sendPageToConn(c,true))}
+  else{wbStrokes=[];redrawWbPres();if(annotatorConn)annotatorConn.send({type:'wb_clear'});guestConns.forEach(c=>c.send({type:'wb_clear'}))}
   toast('🗑 Cleared');
 }
-
 function toggleFullscreen(){
-  if(!document.fullscreenElement)
-    document.getElementById('presenter').requestFullscreen().catch(()=>{});
+  if(!document.fullscreenElement)document.getElementById('presenter').requestFullscreen().catch(()=>{});
   else document.exitFullscreen();
 }
 
-// ── DRAWER: SETUP ──
-function joinDrawer(){
-  const code=document.getElementById('room-input').value.trim();
-  if(!code||code.length<4){toast('Enter a valid room code');return;}
-  startDrawer(code);
-}
-
-function startDrawer(roomCode){
-  showScreen('drawer');
-  const myId='drawer_'+Math.random().toString(36).substr(2,8);
-  peer=new Peer(myId,{host:'0.peerjs.com',port:443,secure:true,path:'/'});
-  peer.on('error',err=>toast('Connection error: '+err.type));
-  peer.on('open',()=>{
-    conn=peer.connect(roomCode,{reliable:true});
-    document.getElementById('draw-status').textContent=`Connecting to ${roomCode}…`;
-    conn.on('open',()=>{
+// ANNOTATOR SETUP
+function startDrawer(code,password=''){
+  myRole='annotator';showScreen('drawer');
+  const myId='ann_'+Math.random().toString(36).substr(2,8);
+  clientPeer=new Peer(myId,{host:'0.peerjs.com',port:443,secure:true,path:'/'});
+  clientPeer.on('error',err=>toast('Error: '+err.type));
+  clientPeer.on('open',()=>{
+    clientConn=clientPeer.connect(code,{reliable:true});
+    document.getElementById('draw-status').textContent='Connecting…';
+    clientConn.on('open',()=>{
+      clientConn.send({type:'identify',role:'annotator',password});
       document.getElementById('draw-dot').className='status-dot online';
-      document.getElementById('draw-status').textContent=`Room ${roomCode}`;
-      toast('✅ Connected!');
+      document.getElementById('draw-status').textContent='Room '+code;
+      toast('✅ Connected as Annotator!');
     });
-    conn.on('data',handleDrawerData);
-    conn.on('close',()=>{
-      document.getElementById('draw-dot').className='status-dot';
-      document.getElementById('draw-status').textContent='Disconnected';
-      toast('Presenter disconnected');
+    clientConn.on('data',d=>{
+      if(d.type==='auth_failed'){
+        goHome();
+        setTimeout(()=>{
+          openAnnotatorPw();
+          setTimeout(()=>{
+            const err=document.getElementById('pw-err');
+            if(err){err.textContent='🔒 '+d.reason;err.classList.add('show')}
+          },200);
+        },300);
+        return;
+      }
+      handleDrawerData(d);
     });
-    conn.on('error',()=>toast('⚠️ Cannot reach room '+roomCode));
+    clientConn.on('close',()=>{document.getElementById('draw-dot').className='status-dot';document.getElementById('draw-status').textContent='Disconnected';toast('Disconnected')});
+    clientConn.on('error',()=>toast('⚠️ Cannot reach room '+code));
   });
 }
 
-// ── DRAWER: RECEIVE ──
+// GUEST SETUP
+function startGuest(code){
+  myRole='guest';showScreen('guest');let myGuestNum=0;
+  const myId='gst_'+Math.random().toString(36).substr(2,8);
+  clientPeer=new Peer(myId,{host:'0.peerjs.com',port:443,secure:true,path:'/'});
+  clientPeer.on('error',err=>toast('Error: '+err.type));
+  clientPeer.on('open',()=>{
+    clientConn=clientPeer.connect(code,{reliable:true});
+    document.getElementById('guest-status').textContent='Connecting…';
+    clientConn.on('open',()=>{
+      clientConn.send({type:'identify',role:'guest'});
+      document.getElementById('guest-dot').className='status-dot online';
+      document.getElementById('guest-status').textContent='Room '+code;
+      toast('✅ Connected as Guest!');
+    });
+    clientConn.on('data',d=>{
+      if(d.type==='hello_from_presenter'){}
+      else if(d.type==='mode_set'){
+        if(d.guestNum){myGuestNum=d.guestNum;document.getElementById('guest-badge').textContent='Guest #'+d.guestNum}
+        handleGuestModeSet(d.mode);
+      }
+      else if(d.type==='page_image'){
+        document.getElementById('guest-waiting').classList.add('hidden');
+        document.getElementById('guest-pg-info').textContent=`Slide ${d.page}/${d.total}`;
+        const img=new Image();img.onload=()=>{
+          const wrap=document.getElementById('guest-view-wrap');
+          const scale=Math.min(wrap.clientWidth/img.width,wrap.clientHeight/img.height)*0.97;
+          const gc=document.getElementById('guest-canvas');
+          gc.width=Math.round(img.width*scale);gc.height=Math.round(img.height*scale);
+          gc.getContext('2d').drawImage(img,0,0,gc.width,gc.height);
+        };img.src=d.dataURL;
+      }
+      else if(d.type==='wb_snapshot'){
+        const img=new Image();img.onload=()=>{
+          const wc=document.getElementById('guest-wb-canvas');
+          const wrap=document.getElementById('guest-wb-wrap');
+          wc.width=wrap.clientWidth||800;wc.height=wrap.clientHeight||500;
+          wc.getContext('2d').drawImage(img,0,0,wc.width,wc.height);
+        };img.src=d.dataURL;
+      }
+      else if(d.type==='wb_clear'){
+        const wc=document.getElementById('guest-wb-canvas');
+        const ctx=wc.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wc.width,wc.height);
+      }
+    });
+    clientConn.on('close',()=>{document.getElementById('guest-dot').className='status-dot';document.getElementById('guest-status').textContent='Disconnected';toast('Disconnected')});
+    clientConn.on('error',()=>toast('⚠️ Cannot reach room '+code));
+  });
+  document.getElementById('guest-q-input').addEventListener('keyup',e=>{if(e.key==='Enter')sendQuestion()});
+  // Store guestNum for sendQuestion
+  window._myGuestNum=()=>myGuestNum;
+}
+
+function handleGuestModeSet(mode){
+  const gvw=document.getElementById('guest-view-wrap');
+  const gww=document.getElementById('guest-wb-wrap');
+  if(mode==='wb'){gvw.style.display='none';gww.classList.add('on')}
+  else{gvw.style.display='flex';gww.classList.remove('on');document.getElementById('guest-waiting').classList.remove('hidden')}
+}
+
+function sendQuestion(){
+  const inp=document.getElementById('guest-q-input');
+  const text=inp.value.trim();if(!text){toast('Type a question first');return}
+  if(!clientConn||clientConn.open===false){toast('Not connected');return}
+  clientConn.send({type:'question',text,guestNum:window._myGuestNum?window._myGuestNum():0});
+  inp.value='';
+  const st=document.getElementById('guest-sent-toast');st.classList.add('show');setTimeout(()=>st.classList.remove('show'),2000);
+}
+
+// ANNOTATOR: RECEIVE
 const pageBg=document.getElementById('page-bg');
 const drawCanvas=document.getElementById('draw-canvas');
 const wbCanvasDraw=document.getElementById('wb-canvas-draw');
@@ -574,168 +811,103 @@ const wbCanvasDraw=document.getElementById('wb-canvas-draw');
 function handleDrawerData(data){
   if(data.type==='mode_set'){
     drawerMode=data.mode;
-    const pdw=document.getElementById('draw-wrap');
-    const wbw=document.getElementById('wb-draw-wrap');
-    const badge=document.getElementById('draw-mode-badge');
-    if(data.mode==='wb'){
-      pdw.style.display='none'; wbw.classList.add('active');
-      badge.className='badge badge-wb'; badge.textContent='Whiteboard';
-      initWbDrawCanvas();
-    } else {
-      pdw.style.display='flex'; wbw.classList.remove('active');
-      badge.className='badge badge-gray'; badge.textContent='PDF';
-    }
-  } else if(data.type==='page_image'){
-    document.getElementById('draw-waiting').classList.add('hidden');
-    pageBg.onload=()=>resizeDrawCanvas();
-    pageBg.src=data.dataURL;
-    document.getElementById('draw-page-info').textContent=`p${data.page}/${data.total}`;
-    clearDrawCanvas();
-  } else if(data.type==='wb_snapshot'){
-    const img=new Image();
-    img.onload=()=>{
-      const ctx=wbCanvasDraw.getContext('2d');
-      ctx.drawImage(img,0,0,wbCanvasDraw.width,wbCanvasDraw.height);
-    };
-    img.src=data.dataURL;
-  } else if(data.type==='clear_all'){
-    clearDrawCanvas();
-  } else if(data.type==='wb_clear'){
-    const ctx=wbCanvasDraw.getContext('2d');
-    ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,wbCanvasDraw.width,wbCanvasDraw.height);
+    const pdw=document.getElementById('draw-wrap');const wbw=document.getElementById('wb-draw-wrap');
+    const nav=document.getElementById('slide-nav');const badge=document.getElementById('draw-mode-badge');
+    const mb_pdf=document.getElementById('mb-pdf');const mb_wb=document.getElementById('mb-wb');
+    if(data.mode==='wb'){pdw.style.display='none';wbw.classList.add('on');nav.style.display='none';badge.className='badge badge-wb';badge.textContent='Whiteboard';mb_pdf.className='mode-bar-btn';mb_wb.className='mode-bar-btn on-wb';initWbDrawCanvas()}
+    else{pdw.style.display='flex';wbw.classList.remove('on');nav.style.display='flex';badge.className='badge badge-green';badge.textContent='PDF/PPT';mb_pdf.className='mode-bar-btn on';mb_wb.className='mode-bar-btn'}
   }
+  else if(data.type==='page_image'){
+    document.getElementById('draw-waiting').classList.add('hidden');
+    pageBg.onload=()=>resizeDrawCanvas();pageBg.src=data.dataURL;
+    document.getElementById('draw-pg-num').textContent=data.page;
+    document.getElementById('draw-pg-total').textContent='/ '+(data.contentType==='images'?data.total+' slides':data.total+' pages');
+    clearDrawCanvas();
+  }
+  else if(data.type==='wb_snapshot'){const img=new Image();img.onload=()=>{const ctx=wbCanvasDraw.getContext('2d');ctx.drawImage(img,0,0,wbCanvasDraw.width,wbCanvasDraw.height)};img.src=data.dataURL}
+  else if(data.type==='clear_all'){clearDrawCanvas()}
+  else if(data.type==='wb_clear'){const ctx=wbCanvasDraw.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wbCanvasDraw.width,wbCanvasDraw.height)}
+  else if(data.type==='new_question'){questions.push(data.question);addQuestionToUI(data.question)}
+  else if(data.type==='all_questions'){questions=data.questions;rebuildQAList()}
+}
+
+function rebuildQAList(){
+  ['pres','draw'].forEach(t=>{
+    const list=document.getElementById('qa-list-'+t);if(!list)return;
+    if(!questions.length){list.innerHTML='<div class="qa-empty">No questions yet.</div>';return}
+    list.innerHTML=questions.map(q=>`<div class="qa-item"><div class="qa-item-meta"><span>Guest #${q.guestNum}</span><span>${q.time}</span></div><div class="qa-item-text">${escHtml(q.text)}</div></div>`).join('');
+    const sub=document.getElementById(t+'-q-sub');if(sub)sub.textContent=questions.length+' question(s)';
+  });
 }
 
 function resizeDrawCanvas(){
   const wrap=document.getElementById('draw-wrap');
-  const W0=wrap.clientWidth, H0=wrap.clientHeight;
-  const iW=pageBg.naturalWidth||800, iH=pageBg.naturalHeight||600;
-  const scale=Math.min(W0/iW,H0/iH)*0.97;
-  const W=Math.round(iW*scale), H=Math.round(iH*scale);
-  pageBg.style.width=W+'px'; pageBg.style.height=H+'px';
-  drawCanvas.width=W; drawCanvas.height=H;
+  const iW=pageBg.naturalWidth||800,iH=pageBg.naturalHeight||600;
+  const scale=Math.min(wrap.clientWidth/iW,wrap.clientHeight/iH)*0.97;
+  pageBg.style.width=Math.round(iW*scale)+'px';pageBg.style.height=Math.round(iH*scale)+'px';
+  drawCanvas.width=Math.round(iW*scale);drawCanvas.height=Math.round(iH*scale);
 }
-
 function initWbDrawCanvas(){
   const wrap=document.getElementById('wb-draw-wrap');
   wbCanvasDraw.width=wrap.clientWidth||window.innerWidth;
-  wbCanvasDraw.height=wrap.clientHeight||(window.innerHeight-110);
-  const ctx=wbCanvasDraw.getContext('2d');
-  ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,wbCanvasDraw.width,wbCanvasDraw.height);
+  wbCanvasDraw.height=wrap.clientHeight||(window.innerHeight-200);
+  const ctx=wbCanvasDraw.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wbCanvasDraw.width,wbCanvasDraw.height);
 }
 
-// ── DRAWER: DRAWING ──
-let drawing=false, lastPt=null;
-
-function getActiveCanvas(){
-  return drawerMode==='wb'?wbCanvasDraw:drawCanvas;
+// DRAWING
+let drawing=false,lastPt=null;
+function getActiveCanvas(){return drawerMode==='wb'?wbCanvasDraw:drawCanvas}
+function getPt(e,canvas){
+  const rect=canvas.getBoundingClientRect();const src=e.touches?e.touches[0]:e;
+  return{x:(src.clientX-rect.left)/rect.width,y:(src.clientY-rect.top)/rect.height};
 }
-
-function getPoint(e,canvas){
-  const rect=canvas.getBoundingClientRect();
-  const src=e.touches?e.touches[0]:e;
-  return{x:(src.clientX-rect.left)/rect.width, y:(src.clientY-rect.top)/rect.height};
-}
-
 function startDraw(e){
-  e.preventDefault();
-  const canvas=getActiveCanvas();
-  canvas.setPointerCapture(e.pointerId);
-  drawing=true;
-  const pt=getPoint(e,canvas);
-  lastPt=pt;
-  if(conn)conn.send({type:'stroke_begin',x:pt.x,y:pt.y,color:drawColor,width:drawWidth,eraser:isEraser});
-  drawSegment(canvas,null,pt,true);
+  e.preventDefault();const canvas=getActiveCanvas();canvas.setPointerCapture(e.pointerId);drawing=true;
+  const pt=getPt(e,canvas);lastPt=pt;
+  if(clientConn)clientConn.send({type:'stroke_begin',x:pt.x,y:pt.y,color:drawColor,width:drawWidth,eraser:isEraser});
+  const ctx=canvas.getContext('2d');ctx.save();ctx.globalCompositeOperation=isEraser?'destination-out':'source-over';
+  ctx.fillStyle=isEraser?'rgba(0,0,0,1)':drawColor;ctx.beginPath();ctx.arc(pt.x*canvas.width,pt.y*canvas.height,drawWidth*Math.min(canvas.width,canvas.height)/200,0,Math.PI*2);ctx.fill();ctx.restore();
 }
-
 function moveDraw(e){
-  if(!drawing)return;
-  e.preventDefault();
-  const canvas=getActiveCanvas();
-  const pt=getPoint(e,canvas);
-  if(conn)conn.send({type:'stroke_point',x:pt.x,y:pt.y});
-  drawSegment(canvas,lastPt,pt,false);
-  lastPt=pt;
+  if(!drawing)return;e.preventDefault();const canvas=getActiveCanvas();const pt=getPt(e,canvas);
+  if(clientConn)clientConn.send({type:'stroke_point',x:pt.x,y:pt.y});
+  const ctx=canvas.getContext('2d');ctx.save();ctx.globalCompositeOperation=isEraser?'destination-out':'source-over';
+  ctx.strokeStyle=isEraser?'rgba(0,0,0,1)':drawColor;ctx.lineWidth=drawWidth*Math.min(canvas.width,canvas.height)/100;
+  ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(lastPt.x*canvas.width,lastPt.y*canvas.height);ctx.lineTo(pt.x*canvas.width,pt.y*canvas.height);ctx.stroke();ctx.restore();lastPt=pt;
 }
+function endDraw(e){if(!drawing)return;drawing=false;if(clientConn)clientConn.send({type:'stroke_end'})}
 
-function endDraw(e){
-  if(!drawing)return;
-  drawing=false;
-  if(conn)conn.send({type:'stroke_end'});
-}
-
-function drawSegment(canvas,from,to,isStart){
-  const ctx=canvas.getContext('2d');
-  const W=canvas.width, H=canvas.height;
-  ctx.save();
-  if(isEraser){ctx.globalCompositeOperation='destination-out';ctx.strokeStyle='rgba(0,0,0,1)';}
-  else{ctx.globalCompositeOperation='source-over';ctx.strokeStyle=drawColor;}
-  ctx.lineWidth=drawWidth*Math.min(W,H)/100;
-  ctx.lineCap='round'; ctx.lineJoin='round';
-  ctx.beginPath();
-  if(isStart||!from){ctx.arc(to.x*W,to.y*H,ctx.lineWidth/2,0,Math.PI*2);ctx.fill();}
-  else{ctx.moveTo(from.x*W,from.y*H);ctx.lineTo(to.x*W,to.y*H);ctx.stroke();}
-  ctx.restore();
-}
-
-// Attach pointer events to PDF canvas
 drawCanvas.addEventListener('pointerdown',startDraw,{passive:false});
 drawCanvas.addEventListener('pointermove',moveDraw,{passive:false});
 drawCanvas.addEventListener('pointerup',endDraw,{passive:false});
-
-// Attach pointer events to WB canvas
 wbCanvasDraw.addEventListener('pointerdown',startDraw,{passive:false});
 wbCanvasDraw.addEventListener('pointermove',moveDraw,{passive:false});
 wbCanvasDraw.addEventListener('pointerup',endDraw,{passive:false});
 
-// ── TOOLBAR ──
-function setColor(el){
-  isEraser=false;
-  document.getElementById('eraser-btn').classList.remove('active');
-  document.querySelectorAll('.color-btn').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
-  drawColor=el.dataset.color;
-}
-function setSize(el){
-  document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
-  drawWidth=parseInt(el.dataset.size);
-}
-function toggleEraser(){
-  isEraser=!isEraser;
-  document.getElementById('eraser-btn').classList.toggle('active',isEraser);
-}
+// TOOLS
+function setColor(el){isEraser=false;document.getElementById('eraser-btn').classList.remove('on');document.querySelectorAll('.color-btn').forEach(b=>b.classList.remove('on'));el.classList.add('on');drawColor=el.dataset.color}
+function setSize(el){document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('on'));el.classList.add('on');drawWidth=parseInt(el.dataset.size)}
+function toggleEraser(){isEraser=!isEraser;document.getElementById('eraser-btn').classList.toggle('on',isEraser)}
 function clearCurrentPage(){
-  if(drawerMode==='wb'){
-    const ctx=wbCanvasDraw.getContext('2d');
-    ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,wbCanvasDraw.width,wbCanvasDraw.height);
-    if(conn)conn.send({type:'wb_clear'});
-  } else {
-    clearDrawCanvas();
-    if(conn)conn.send({type:'clear_page',page:currentPage});
-  }
+  if(drawerMode==='wb'){const ctx=wbCanvasDraw.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wbCanvasDraw.width,wbCanvasDraw.height);if(clientConn)clientConn.send({type:'wb_clear'})}
+  else{clearDrawCanvas();if(clientConn)clientConn.send({type:'clear_page',page:currentPage})}
   toast('🗑 Cleared');
 }
-function clearDrawCanvas(){
-  const ctx=drawCanvas.getContext('2d');
-  ctx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
-}
-function clearWbDrawCanvas(){
-  const ctx=wbCanvasDraw.getContext('2d');
-  ctx.clearRect(0,0,wbCanvasDraw.width,wbCanvasDraw.height);
-}
-function undoStroke(){
-  if(conn)conn.send({type:'undo'});
-  toast('↩ Undo');
-}
-function requestPage(delta){
-  if(conn)conn.send({type:'page_request',delta});
+function clearDrawCanvas(){const ctx=drawCanvas.getContext('2d');ctx.clearRect(0,0,drawCanvas.width,drawCanvas.height)}
+function clearWbDrawCanvas(){const ctx=wbCanvasDraw.getContext('2d');ctx.clearRect(0,0,wbCanvasDraw.width,wbCanvasDraw.height)}
+function undoStroke(){if(clientConn)clientConn.send({type:'undo'});toast('↩ Undo')}
+function requestPage(delta){if(clientConn)clientConn.send({type:'page_request',delta})}
+function drawerRequestMode(mode){if(clientConn)clientConn.send({type:'request_mode',mode});toast(mode==='wb'?'🟩 Switching to Whiteboard…':'📄 Switching to PDF/PPT…')}
+function goFullscreen(){
+  const el=document.getElementById('drawer');
+  if(!document.fullscreenElement)el.requestFullscreen().catch(()=>toast('Fullscreen not supported here'));
+  else document.exitFullscreen();
 }
 
-// ── RESIZE ──
+// RESIZE
 window.addEventListener('resize',()=>{
   if(document.getElementById('presenter').classList.contains('active')){
-    if(presMode==='pdf'&&pdfDoc)renderPresenterPage(currentPage);
+    if(presMode==='pdf'&&(pdfDoc||imgSlides.length))renderPresenterPage(currentPage);
     else if(presMode==='wb')initWbPresCanvas();
   }
   if(document.getElementById('drawer').classList.contains('active')){
@@ -744,10 +916,104 @@ window.addEventListener('resize',()=>{
   }
 });
 
-// ── AUTO-JOIN FROM HASH ──
+// ── PASSWORD SYSTEM ──
+let presPassword='';   // set by presenter
+let pendingPresMode=''; // 'pdf' | 'wb'
+
+function openPresenterPw(mode){
+  pendingPresMode=mode;
+  const body=document.getElementById('pw-body');
+  document.getElementById('pw-icon').textContent='🔒';
+  document.getElementById('pw-title').textContent='Set Room Password';
+  document.getElementById('pw-sub').textContent='Protect your session. Annotators must enter this password to join.';
+  document.getElementById('pw-hint').textContent='Guests (view-only) never need a password.';
+  body.innerHTML=`
+    <label class="pw-label">PASSWORD</label>
+    <div class="pw-field">
+      <input class="pw-input" id="pw-a" type="password" placeholder="Enter a password (min 4 chars)" maxlength="50">
+      <button class="pw-toggle" onclick="togglePwVis('pw-a')">👁</button>
+    </div>
+    <label class="pw-label">CONFIRM PASSWORD</label>
+    <div class="pw-field">
+      <input class="pw-input" id="pw-b" type="password" placeholder="Re-enter password" maxlength="50">
+      <button class="pw-toggle" onclick="togglePwVis('pw-b')">👁</button>
+    </div>
+    <div class="pw-divider"><span>OR</span></div>
+    <button class="pw-skip" onclick="startWithNoPassword()">Start without password (open to all)</button>
+    <div class="pw-actions">
+      <button class="btn btn-secondary" onclick="closePwModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmPresenterPw()">🔒 Start Protected</button>
+    </div>`;
+  document.getElementById('pw-err').classList.remove('show');
+  document.getElementById('pw-overlay').classList.remove('hidden');
+  setTimeout(()=>{const el=document.getElementById('pw-a');if(el)el.focus()},100);
+}
+
+function openAnnotatorPw(){
+  const body=document.getElementById('pw-body');
+  document.getElementById('pw-icon').textContent='📱';
+  document.getElementById('pw-title').textContent='Join as Annotator';
+  document.getElementById('pw-sub').textContent='Enter the room code and password provided by the presenter.';
+  document.getElementById('pw-hint').textContent='Contact the presenter if you don\'t have the password.';
+  body.innerHTML=`
+    <label class="pw-label">ROOM CODE</label>
+    <div class="pw-field">
+      <input class="pw-input code" id="pw-code" type="text" placeholder="6-digit code" maxlength="6" inputmode="numeric">
+    </div>
+    <label class="pw-label">PASSWORD</label>
+    <div class="pw-field">
+      <input class="pw-input" id="pw-pass" type="password" placeholder="Room password (leave blank if none)" maxlength="50">
+      <button class="pw-toggle" onclick="togglePwVis('pw-pass')">👁</button>
+    </div>
+    <div class="pw-actions">
+      <button class="btn btn-secondary" onclick="closePwModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAnnotatorPw()">🔗 Connect</button>
+    </div>`;
+  document.getElementById('pw-err').classList.remove('show');
+  document.getElementById('pw-hint').textContent='Leave password blank if the presenter did not set one.';
+  document.getElementById('pw-overlay').classList.remove('hidden');
+  setTimeout(()=>{const el=document.getElementById('pw-code');if(el)el.focus()},100);
+  // enter key
+  setTimeout(()=>{
+    const code=document.getElementById('pw-code');
+    const pass=document.getElementById('pw-pass');
+    if(code)code.addEventListener('keyup',e=>{if(e.key==='Enter')document.getElementById('pw-pass').focus()});
+    if(pass)pass.addEventListener('keyup',e=>{if(e.key==='Enter')confirmAnnotatorPw()});
+  },150);
+}
+
+function confirmPresenterPw(){
+  const a=document.getElementById('pw-a').value;
+  const b=document.getElementById('pw-b').value;
+  const err=document.getElementById('pw-err');
+  if(a.length>0&&a.length<4){err.textContent='Password must be at least 4 characters.';err.classList.add('show');return}
+  if(a!==b){err.textContent='Passwords do not match.';err.classList.add('show');return}
+  presPassword=a;closePwModal();startPresenter(pendingPresMode);
+}
+
+function startWithNoPassword(){presPassword='';closePwModal();startPresenter(pendingPresMode)}
+
+function confirmAnnotatorPw(){
+  const code=document.getElementById('pw-code').value.trim();
+  const pass=document.getElementById('pw-pass')?document.getElementById('pw-pass').value:'';
+  const err=document.getElementById('pw-err');
+  if(!code||code.length<4){err.textContent='Enter a valid room code.';err.classList.add('show');return}
+  closePwModal();startDrawer(code,pass);
+}
+
+function closePwModal(){document.getElementById('pw-overlay').classList.add('hidden')}
+
+function togglePwVis(id){
+  const el=document.getElementById(id);if(!el)return;
+  el.type=el.type==='password'?'text':'password';
+}
+
+function showPwError(msg){toast('🔒 '+msg,3500)}
+
+// AUTO-JOIN
 window.addEventListener('load',()=>{
   const m=location.hash.match(/[#&]join=([A-Za-z0-9]+)/);
-  if(m){document.getElementById('room-input').value=m[1];showJoinForm();}
+  if(m){document.getElementById('room-input').value=m[1];showJoinForm('annotator')}
 });
 </script>
 </body>
