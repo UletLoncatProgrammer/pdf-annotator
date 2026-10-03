@@ -141,12 +141,16 @@
     @media (orientation:landscape){
       #drawer-main{display:flex;flex:1;flex-direction:row;overflow:hidden;min-height:0}
       #drawer-left{display:flex;flex-direction:column;flex:1;overflow:hidden;min-width:0}
-      #drawer-bottom{width:260px;flex-shrink:0;border-left:1px solid var(--border);border-top:none}
+      #drawer-bottom{width:min(190px,28vw);flex-shrink:0;border-left:1px solid var(--border);border-top:none;font-size:12px}
       #draw-wrap,#wb-draw-wrap{flex:1 !important;width:auto !important}
+      .qa-bottom-head{padding:5px 10px}
+      .qa-bottom-title{font-size:12px}
+      .notif-text{font-size:12px}
     }
     @media (orientation:portrait){
       #drawer-main{display:flex;flex:1;flex-direction:column;overflow:hidden;min-height:0}
       #drawer-left{display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+      #drawer-bottom{max-height:min(38vh,280px);flex-shrink:0}
     }
 
     /* Presenter announce modal */
@@ -233,6 +237,25 @@
     .toast.show{opacity:1}
     :fullscreen .top-bar{display:none}
     :fullscreen .slide-nav,.fullscreen .mode-bar{display:none}
+
+    /* Floating file switcher button — only visible in fullscreen */
+    .fs-file-btn{
+      display:none;position:absolute;top:10px;right:10px;z-index:150;
+      background:rgba(11,30,61,.88);border:1px solid var(--border);color:var(--white);
+      border-radius:8px;padding:8px 13px;font-size:12px;font-weight:600;cursor:pointer;
+      backdrop-filter:blur(6px);gap:5px;align-items:center;transition:opacity .2s;
+    }
+    :fullscreen .fs-file-btn{display:flex}
+    :fullscreen .fs-file-btn:hover{background:rgba(37,99,168,.85)}
+
+    /* Deck panel adjusts top position in fullscreen (no top bar) */
+    :fullscreen .deck-panel{top:10px}
+    :fullscreen .draw-deck-panel{padding-top:0}
+
+    /* In fullscreen annotator, keep slide-nav visible (override hide) */
+    :fullscreen #slide-nav{display:flex !important}
+    :fullscreen .toolbar{display:flex !important}
+    :fullscreen .mode-bar{display:flex !important}
 
     /* PASSWORD MODAL */
     .pw-overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -356,6 +379,9 @@
   </div>
 
   <!-- Q&A backdrop -->
+  <!-- Floating file button — fullscreen only -->
+  <button class="fs-file-btn" onclick="toggleDeckPanel()">📁 Files <span id="fs-cur-name" style="color:var(--lblue);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></button>
+
   <!-- DECK SWITCHER PANEL (presenter) -->
   <div class="deck-panel hidden" id="deck-panel-pres">
     <div class="deck-panel-head">
@@ -411,6 +437,9 @@
     <button class="icon-btn" onclick="goFullscreen()" title="Fullscreen">⛶</button>
     <button class="icon-btn" onclick="goHome()"       title="Exit" style="color:#EF4444">✕</button>
   </div>
+
+  <!-- Floating file button — fullscreen only -->
+  <button class="fs-file-btn" onclick="toggleDrawDeckPanel()" style="right:10px;top:10px">📁 Files</button>
 
   <!-- Annotator deck switcher overlay -->
   <div class="draw-deck-panel" id="draw-deck-panel">
@@ -523,7 +552,12 @@
   <div id="guest-view-wrap">
     <div class="guest-label">👁 View Only</div>
     <canvas id="guest-canvas"></canvas>
-    <div class="guest-waiting" id="guest-waiting"><div class="spinner"></div><span>Waiting for presenter to start…</span></div>
+    <div class="guest-waiting" id="guest-waiting">
+      <div class="spinner"></div>
+      <span>Waiting for presenter to start…</span>
+      <button id="guest-refresh-btn" onclick="guestRequestRefresh()" style="display:none;margin-top:12px;background:var(--blue);border:none;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">🔄 Tap to Refresh Slide</button>
+      <span style="font-size:11px;color:var(--gray);margin-top:8px" id="guest-hint-txt"></span>
+    </div>
     <div class="guest-sent-toast" id="guest-sent-toast">✅ Question sent!</div>
   </div>
   <div id="guest-wb-wrap">
@@ -660,8 +694,8 @@ function startPresenter(mode){
           guestCounter++;const gNum=guestCounter;guestConns.set(c.peer,c);
           c.send({type:'mode_set',mode:presMode,guestNum:gNum});
           // Small delay so connection is stable before pushing image data
-          if(presMode==='pdf'&&(pdfDoc||imgSlides.length))setTimeout(()=>sendLowResToGuest(c),600);
-          else if(presMode==='wb')setTimeout(()=>sendWbSnapshotToConn(c,true),600);
+          if(presMode==='pdf'&&(pdfDoc||imgSlides.length))setTimeout(()=>sendLowResToGuest(c),1500);
+          else if(presMode==='wb')setTimeout(()=>sendWbSnapshotToConn(c,true),1500);
           updatePresenterBadge();toast(`👁 Guest #${gNum} joined`);
           c.on('close',()=>{guestConns.delete(c.peer);updatePresenterBadge();toast(`Guest #${gNum} left`)});
         }
@@ -802,7 +836,9 @@ function renderDeckListPres(){
       </div>
       <button class="deck-item-del" onclick="event.stopPropagation();removeDeck(${i})" title="Remove">✕</button>
     </div>`).join('');
-  document.getElementById('deck-cur-name').textContent=decks[currentDeckIndex]?.name||'No file';
+  const name=decks[currentDeckIndex]?.name||'No file';
+  document.getElementById('deck-cur-name').textContent=name;
+  const fsn=document.getElementById('fs-cur-name');if(fsn)fsn.textContent=name;
 }
 
 function renderDeckListDraw(decklist,curIdx){
@@ -948,27 +984,47 @@ async function sendPageToConn(c,isGuest=false){
   c.send({type:'page_image',page:currentPage,total:totalPages,dataURL:tmp.toDataURL('image/jpeg',.82),contentType});
 }
 
-// Low-res compressed → guest (to prevent buffering)
+// ── CHUNKED IMAGE SENDING FOR GUESTS ──────────────────────────────
+// WebRTC data channel drops messages >16KB on mobile/iOS
+// We chunk into 6KB pieces and reassemble on guest side
+const GCHUNK = 6000; // 6KB per chunk — safe for all platforms
+
 function sendLowResToGuest(c){
   if(!c||c.open===false)return;
-  const maxW=720;
+  if(!pdfCanvas.width||!pdfCanvas.height)return;
+  // Small canvas for guests: max 320px wide
+  const maxW=320;
   const scale=Math.min(1,maxW/Math.max(pdfCanvas.width,1));
   const tmp=document.createElement('canvas');
-  tmp.width=Math.round(pdfCanvas.width*scale);
-  tmp.height=Math.round(pdfCanvas.height*scale);
+  tmp.width=Math.max(1,Math.round(pdfCanvas.width*scale));
+  tmp.height=Math.max(1,Math.round(pdfCanvas.height*scale));
   const ctx=tmp.getContext('2d');
   ctx.drawImage(pdfCanvas,0,0,tmp.width,tmp.height);
   ctx.drawImage(overlayCanvas,0,0,tmp.width,tmp.height);
-  c.send({type:'page_image',page:currentPage,total:totalPages,dataURL:tmp.toDataURL('image/jpeg',.52),contentType});
+  const url=tmp.toDataURL('image/jpeg',.32);
+  _sendChunked(c,{type:'page_image',page:currentPage,total:totalPages,contentType},url);
 }
 
-// Throttled guest broadcast — max 1 update per 400ms
+function _sendChunked(c,meta,dataURL){
+  if(!c||c.open===false)return;
+  const id=Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6);
+  const n=Math.ceil(dataURL.length/GCHUNK);
+  try{c.send({type:'img_start',id,n,page:meta.page,total:meta.total,ct:meta.contentType})}catch(e){return}
+  for(let i=0;i<n;i++){
+    const chunk=dataURL.slice(i*GCHUNK,(i+1)*GCHUNK);
+    setTimeout(()=>{
+      try{if(c.open!==false)c.send({type:'img_chunk',id,i,d:chunk})}catch(e){}
+    },i*40); // 40ms between chunks = safe for mobile
+  }
+}
+
+// Throttled guest broadcast — max 1 update per 600ms
 let _guestThrottle=null;
 function scheduleGuestUpdate(){
   clearTimeout(_guestThrottle);
   _guestThrottle=setTimeout(()=>{
     guestConns.forEach(c=>sendLowResToGuest(c));
-  },400);
+  },600);
 }
 
 // WHITEBOARD
@@ -1014,6 +1070,13 @@ function handlePresenterDrawData(data){
   if(data.type==='request_mode'){switchPresMode(data.mode);return}
   if(data.type==='page_request'){changePage(data.delta);return}
   if(data.type==='deck_switch_request'){switchDeck(data.index);return}
+  if(data.type==='guest_refresh_request'){
+    // Find this guest's conn and resend
+    guestConns.forEach(c=>{if(c.peer===data._from||c===annotatorConn){}});
+    // Resend to all guests (simpler — find sender by checking all)
+    guestConns.forEach(c=>setTimeout(()=>sendLowResToGuest(c),300));
+    return;
+  }
   if(presMode==='pdf'){
     if(!annotations[currentPage])annotations[currentPage]=[];
     const strokes=annotations[currentPage];
@@ -1100,24 +1163,51 @@ function startGuest(code){
       document.getElementById('guest-status').textContent='Room '+code;
       toast('✅ Connected as Guest!');
     });
+    const _gBuf={}; // chunk reassembly buffer
+
     clientConn.on('data',d=>{
+      // ── CHUNKED IMAGE PROTOCOL ──
+      if(d.type==='img_start'){
+        _gBuf[d.id]={n:d.n,page:d.page,total:d.total,ct:d.ct,chunks:new Array(d.n),got:0};
+        document.getElementById('guest-waiting').classList.add('hidden');
+        document.getElementById('guest-refresh-btn').style.display='none';
+        document.getElementById('guest-pg-info').textContent=`Slide ${d.page}/${d.total}`;
+        clearTimeout(window._gRetry);
+        return;
+      }
+      if(d.type==='img_chunk'){
+        const b=_gBuf[d.id];if(!b)return;
+        b.chunks[d.i]=d.d;b.got++;
+        if(b.got===b.n){
+          const url=b.chunks.join('');
+          delete _gBuf[d.id];
+          _displayGuestImage(url,b.page,b.total);
+        }
+        return;
+      }
+      // ── STANDARD MESSAGES ──
       if(d.type==='hello_from_presenter'){}
       else if(d.type==='mode_set'){
         if(d.guestNum){myGuestNum=d.guestNum;document.getElementById('guest-badge').textContent='Guest #'+d.guestNum}
         handleGuestModeSet(d.mode);
+        // show refresh button if no image arrives in 5s
+        clearTimeout(window._gRetry);
+        window._gRetry=setTimeout(()=>{
+          if(!document.getElementById('guest-waiting').classList.contains('hidden'))
+            document.getElementById('guest-refresh-btn').style.display='block';
+        },5000);
       }
       else if(d.type==='page_image'){
+        // legacy fallback (non-chunked)
         document.getElementById('guest-waiting').classList.add('hidden');
+        document.getElementById('guest-refresh-btn').style.display='none';
         document.getElementById('guest-pg-info').textContent=`Slide ${d.page}/${d.total}`;
-        const img=new Image();img.onload=()=>{
-          const wrap=document.getElementById('guest-view-wrap');
-          const scale=Math.min(wrap.clientWidth/img.width,wrap.clientHeight/img.height)*0.97;
-          const gc=document.getElementById('guest-canvas');
-          gc.width=Math.round(img.width*scale);gc.height=Math.round(img.height*scale);
-          gc.getContext('2d').drawImage(img,0,0,gc.width,gc.height);
-        };img.src=d.dataURL;
+        clearTimeout(window._gRetry);
+        _displayGuestImage(d.dataURL,d.page,d.total);
       }
       else if(d.type==='wb_snapshot'){
+        document.getElementById('guest-waiting').classList.add('hidden');
+        clearTimeout(window._gRetry);
         const img=new Image();img.onload=()=>{
           const wc=document.getElementById('guest-wb-canvas');
           const wrap=document.getElementById('guest-wb-wrap');
@@ -1133,7 +1223,6 @@ function startGuest(code){
         const banner=document.getElementById('guest-announce');
         document.getElementById('guest-announce-text').textContent=d.text;
         banner.classList.add('show');
-        // auto-hide after 12 seconds
         clearTimeout(window._gaBannerTimer);
         window._gaBannerTimer=setTimeout(()=>banner.classList.remove('show'),12000);
       }
@@ -1151,6 +1240,31 @@ function handleGuestModeSet(mode){
   const gww=document.getElementById('guest-wb-wrap');
   if(mode==='wb'){gvw.style.display='none';gww.classList.add('on')}
   else{gvw.style.display='flex';gww.classList.remove('on');document.getElementById('guest-waiting').classList.remove('hidden')}
+}
+
+function _displayGuestImage(url,page,total){
+  const img=new Image();
+  img.onload=()=>{
+    const wrap=document.getElementById('guest-view-wrap');
+    const gc=document.getElementById('guest-canvas');
+    const wW=wrap.clientWidth||window.innerWidth;
+    const wH=wrap.clientHeight||(window.innerHeight-120);
+    const scale=Math.min(wW/img.width,wH/img.height)*0.99;
+    gc.width=Math.round(img.width*scale);
+    gc.height=Math.round(img.height*scale);
+    gc.getContext('2d').drawImage(img,0,0,gc.width,gc.height);
+  };
+  img.onerror=()=>toast('⚠️ Could not display slide');
+  img.src=url;
+}
+
+function guestRequestRefresh(){
+  if(clientConn&&clientConn.open!==false){
+    clientConn.send({type:'guest_refresh_request'});
+    document.getElementById('guest-refresh-btn').style.display='none';
+    document.getElementById('guest-waiting').classList.remove('hidden');
+    toast('Requesting slide from presenter…');
+  } else {toast('Not connected to presenter')}
 }
 
 function sendQuestion(){
