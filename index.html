@@ -67,6 +67,9 @@
     #vid-vol{width:90px}
     .vid-hint{font-size:12px;color:#9fb3d1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     #drawer.vid-playing #draw-canvas{cursor:not-allowed}
+    #vid-live,#ann-vid-ext{position:absolute;left:0;top:0;width:100%;height:100%;display:none;pointer-events:none;background:#000}
+    #vid-live{object-fit:fill}
+    #ann-vid-ext iframe,#ann-vid-ext video,#ann-vid-ext #ann-yt{width:100%;height:100%;border:0;display:block;pointer-events:none}
     #wb-wrap{flex:1;position:relative;overflow:hidden;display:none;align-items:center;justify-content:center;background:#fff}
     #wb-wrap.on{display:flex}
     #wb-canvas-pres{display:block}
@@ -610,6 +613,8 @@
       <div class="area" id="draw-wrap">
         <div class="stage" id="draw-stage">
           <img id="page-bg" alt="">
+          <img id="vid-live" alt="">
+          <div id="ann-vid-ext"></div>
           <canvas id="draw-canvas"></canvas>
         </div>
         <div class="waiting" id="draw-waiting"><div class="spinner"></div><span id="draw-waiting-txt">Waiting for presenter…</span></div>
@@ -871,7 +876,7 @@ function goHome(){resetClientUI();
   if(presenterPeer){try{presenterPeer.destroy()}catch(e){}presenterPeer=null}
   if(clientConn){try{clientConn.close()}catch(e){}clientConn=null}
   if(clientPeer){try{clientPeer.destroy()}catch(e){}clientPeer=null}
-  try{vidUnmount()}catch(e){}pdfDoc=null;imgSlides=[];currentPage=1;totalPages=1;contentType='none';decks=[];currentDeckIndex=-1;
+  try{vidUnmount();annExtStop();annLiveHide()}catch(e){}pdfDoc=null;imgSlides=[];currentPage=1;totalPages=1;contentType='none';decks=[];currentDeckIndex=-1;
   annotations={};wbStrokes=[];questions=[];unreadQ=0;myRole='';
   document.getElementById('upload-overlay').style.display='flex';
   document.getElementById('page-nav').style.display='none';
@@ -1391,6 +1396,7 @@ const wbCanvasDraw=document.getElementById('wb-canvas-draw');
 function handleDrawerData(data){
   if(data.type==='blackout'){applyAnnBlackout(data.on);return}
   if(data.type==='video_state'){applyAnnVideo(data);return}
+  if(data.type==='vid_frame'){annVidFrame(data);return}
   if(data.type==='xfer_ack'||data.type==='xfer_done'){handleXferReply(data);return}
   if(data.type==='mode_set'&&typeof data.blackout!=='undefined')applyAnnBlackout(data.blackout);
   if(data.type==='mode_set'){
@@ -1402,6 +1408,7 @@ function handleDrawerData(data){
     else{pdw.style.display='flex';wbw.classList.remove('on');nav.style.display=annVid.active?'none':'flex';_annVidWasOn=!annVid.active;applyAnnVideo(annVid);badge.className='badge badge-green';badge.textContent='PDF/PPT';mb_pdf.className='mode-bar-btn on';mb_wb.className='mode-bar-btn';relayoutDrawer()}
   }
   else if(data.type==='page_image'){
+    annLiveHide();
     document.getElementById('draw-waiting').classList.add('hidden');
     pageBg.onload=()=>{setupDrawCanvasForImage();requestAnimationFrame(()=>requestAnimationFrame(resizeDrawCanvas))};
     pageBg.src=data.dataURL;annPage=data.page||1;
@@ -2048,6 +2055,7 @@ function startPresenter(mode){
   });
 }
 
+// v21 (5 Oct 2026): annotator sees the video (live frames / own muted player).
 // v20 (5 Oct 2026): video decks (file / YouTube) — see VIDEO section.
 // v19 (4 Oct 2026): offline mode — see HubPeer above and hub.js in the offline kit.
 // v18 (4 Oct 2026): clear/undo use the annotator's slide; strokes stay on the slide they were drawn on;
@@ -2509,7 +2517,7 @@ function vidMount(deck){
   sendVidState();
 }
 function vidUnmount(){
-  clearInterval(_vidTick);
+  clearInterval(_vidTick);vidFrameLoop(false);
   const v=vid;if(!v)return;vid=null;
   try{v.deck.lastTime=v.kind==='yt'?(v.yt&&v.yt.getCurrentTime?v.yt.getCurrentTime():v.t):v.el.currentTime}catch(e){}
   v.deck.vol=v.vol;v.deck.muted=v.muted;
@@ -2526,6 +2534,7 @@ function vidInkReset(){
 function vidPlaying(p){
   const v=vid;if(!v)return;
   if(v.playing!==p){v.playing=p;if(p)vidInkReset();vidSnapshot()}   // ink belongs to one paused frame
+  vidFrameLoop(p&&v.kind==='file');
   sendVidState();
 }
 function vidDraw(note){
@@ -2548,7 +2557,7 @@ function vidSnapshot(note){
 }
 function vidStateMsg(){
   const v=vid;if(!v)return{type:'video_state',active:false};
-  return{type:'video_state',active:true,kind:v.kind,title:String(v.deck.name),playing:v.playing,t:v.t||0,dur:isFinite(v.dur)?v.dur:0,vol:v.vol,muted:v.muted,ready:v.ready};
+  return{type:'video_state',active:true,kind:v.kind,ytId:v.kind==='yt'?v.deck.ytId:'',src:v.kind==='url'?v.deck.src:'',title:String(v.deck.name),playing:v.playing,t:v.t||0,dur:isFinite(v.dur)?v.dur:0,vol:v.vol,muted:v.muted,ready:v.ready};
 }
 function sendVidState(){_vidStateT=Date.now();if(annotatorConn){try{annotatorConn.send(vidStateMsg())}catch(e){}}}
 function vidCmd(cmd,val){
@@ -2577,24 +2586,93 @@ function vidCmd(cmd,val){
 
 // ── annotator: video remote ──
 function applyAnnVideo(d){
-  annVid=d&&d.active?d:{active:false,playing:false};
+  annVid=d&&d.active?d:{active:false,playing:false};annVid._rx=Date.now();
   const box=_el('vid-ctl');if(!box)return;
   const on=!!annVid.active&&drawerMode!=='wb';
   box.classList.toggle('on',on);
   _el('drawer').classList.toggle('vid-playing',on&&!!annVid.playing);
   if(drawerMode!=='wb')_el('slide-nav').style.display=on?'none':'flex';
   if(on!==_annVidWasOn){_annVidWasOn=on;relayoutDrawer()}
+  annExtSync(annVid);
+  if(!on||annVid.kind!=='file')annLiveHide();
   if(!on)return;
   _el('vid-play').textContent=annVid.playing?'⏸':'▶';
   _el('vid-time').textContent=fmtT(annVid.t)+' / '+fmtT(annVid.dur);
   if(!annVidSeeking&&annVid.dur>0)_el('vid-seek').value=Math.round(1000*annVid.t/annVid.dur);
   _el('vid-mute').textContent=(annVid.muted||annVid.vol===0)?'🔇':'🔊';
   if(document.activeElement!==_el('vid-vol'))_el('vid-vol').value=annVid.vol==null?100:annVid.vol;
-  _el('vid-hint').textContent=(annVid.playing?'▶ Playing on the main screen — pause to draw':'⏸ Paused — you can draw on this frame')+(annVid.title?' · '+annVid.title:'');
+  _el('vid-hint').textContent=(annVid.playing?(annVid.kind==='file'?'▶ Playing — live preview (no sound here) · pause to draw':'▶ Playing — muted copy on this tablet · pause to draw'):'⏸ Paused — you can draw on this frame')+(annVid.title?' · '+annVid.title:'');
 }
 function annVidCmd(cmd,v){if(clientConn&&clientConn.open!==false){try{clientConn.send({type:'video_cmd',cmd,v})}catch(e){}}}
 function annVidSeekTo(val){annVidSeeking=false;if(annVid.dur>0)annVidCmd('seek',(+val/1000)*annVid.dur)}
 function annVidVol(val){clearTimeout(_annVolT);_annVolT=setTimeout(()=>annVidCmd('volume',+val),120)}
+
+
+// ═══════════════ v21: ANNOTATOR SEES THE VIDEO ═══════════════
+// Local file  → presenter streams JPEG frames (≤10/s, skipped when the link is busy). No sound on the tablet.
+// YouTube/web → the tablet plays the same video itself, muted, kept in sync with video_state (needs internet).
+let _vfT=null,_vfSeq=0,_vfCanvas=null,annExt=null;
+function vidFrameLoop(on){clearInterval(_vfT);_vfT=null;if(on)_vfT=setInterval(vidSendFrame,100)}
+function vidSendFrame(){
+  const v=vid,c=annotatorConn;
+  if(!v||!v.playing||v.kind!=='file'||!c||c.open===false||presMode!=='pdf')return;
+  const el=v.el;if(!el||el.readyState<2||!el.videoWidth)return;
+  const dc=c.dataChannel;
+  if((dc&&dc.bufferedAmount>300000)||(c.bufferSize||0)>4)return;          // link busy: skip this frame, never queue up
+  if(!_vfCanvas)_vfCanvas=document.createElement('canvas');
+  const pw=pdfCanvas.width||960,ph=pdfCanvas.height||540,W=Math.min(960,pw),H=Math.max(1,Math.round(W*ph/pw));
+  if(_vfCanvas.width!==W||_vfCanvas.height!==H){_vfCanvas.width=W;_vfCanvas.height=H}
+  try{_vfCanvas.getContext('2d').drawImage(el,0,0,W,H);c.send({type:'vid_frame',seq:++_vfSeq,dataURL:_vfCanvas.toDataURL('image/jpeg',.6)})}catch(e){}
+}
+// annotator: live frames of a local file
+function annVidFrame(d){
+  const img=_el('vid-live');if(!img)return;
+  if(!(annVid.active&&annVid.playing&&annVid.kind==='file'&&drawerMode!=='wb'))return;
+  img.src=d.dataURL;img.style.display='block';
+}
+function annLiveHide(){const img=_el('vid-live');if(img){img.style.display='none';img.removeAttribute('src')}}
+// annotator: own muted player for YouTube / web videos
+function annExtStop(){
+  const x=annExt;annExt=null;
+  if(x){try{x.yt&&x.yt.destroy()}catch(e){}try{if(x.el){x.el.pause();x.el.removeAttribute('src');x.el.load()}}catch(e){}}
+  const box=_el('ann-vid-ext');if(box){box.innerHTML='';box.style.display='none'}
+}
+function annExtSync(s){
+  const ok=s&&s.active&&drawerMode!=='wb'&&((s.kind==='yt'&&/^[A-Za-z0-9_-]{6,20}$/.test(s.ytId||''))||(s.kind==='url'&&/^https?:\/\//i.test(s.src||'')));
+  if(!ok){if(annExt)annExtStop();return}
+  const key=s.kind+':'+(s.ytId||s.src),box=_el('ann-vid-ext');
+  if(!annExt||annExt.key!==key){
+    annExtStop();const x=annExt={key,kind:s.kind,ready:false};box.style.display='block';
+    if(s.kind==='yt'){
+      box.innerHTML='<div id="ann-yt"></div>';
+      loadYT().then(()=>{
+        if(annExt!==x)return;
+        x.yt=new YT.Player('ann-yt',{videoId:s.ytId,width:'100%',height:'100%',
+          playerVars:{playsinline:1,controls:0,disablekb:1,rel:0,mute:1,start:Math.floor(s.t)||0,origin:location.origin},
+          events:{onReady:()=>{if(annExt!==x)return;x.ready=true;try{x.yt.mute()}catch(e){}annExtSync(annVid)}}});
+      }).catch(()=>{if(annExt===x){toast('⚠️ This tablet needs internet to show the YouTube video',5000);annExtStop()}});
+    }else{
+      const el=document.createElement('video');el.muted=true;el.playsInline=true;el.preload='auto';el.src=s.src;
+      x.el=el;box.appendChild(el);
+      el.addEventListener('loadedmetadata',()=>{if(annExt===x){x.ready=true;annExtSync(annVid)}});
+      el.addEventListener('error',()=>{if(annExt===x){toast('⚠️ This tablet cannot load the web video',5000);annExtStop()}});
+    }
+    return;
+  }
+  const x=annExt;if(!x.ready)return;
+  const target=s.t+(s.playing?Math.max(0,(Date.now()-(s._rx||Date.now()))/1000):0);
+  try{
+    if(x.yt){
+      const cur=x.yt.getCurrentTime()||0,st=x.yt.getPlayerState();
+      if(s.playing){if(Math.abs(cur-target)>1.5)x.yt.seekTo(target,true);if(st!==1&&st!==3)x.yt.playVideo()}
+      else{if(st===1||st===3)x.yt.pauseVideo();if(Math.abs(cur-s.t)>0.4)x.yt.seekTo(s.t,true)}
+    }else if(x.el){
+      const el=x.el;
+      if(s.playing){if(Math.abs(el.currentTime-target)>1.5)el.currentTime=target;if(el.paused){const p=el.play();if(p&&p.catch)p.catch(()=>{})}}
+      else{if(!el.paused)el.pause();if(Math.abs(el.currentTime-s.t)>0.4)el.currentTime=s.t}
+    }
+  }catch(e){}
+}
 
 // AUTO-JOIN
 window.addEventListener('load',()=>{
