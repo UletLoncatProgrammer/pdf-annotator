@@ -152,6 +152,44 @@
     .tb-sep{width:1px;height:24px;background:var(--border);flex-shrink:0}
     .zoom-lbl{font-size:12px;color:var(--lblue);min-width:26px;text-align:center;font-weight:600}
 
+    /* v17: bigger slide navigation, black screen, annotator uploads, guest full screen */
+    .page-nav{gap:14px;padding:6px 16px;transition:opacity .3s}
+    .page-nav button{font-size:26px;min-width:44px;min-height:40px;border-radius:10px;padding:0 8px}
+    .page-nav button:hover,.page-nav button:active{background:rgba(255,255,255,.14)}
+    .page-nav span{font-size:14px}
+    :fullscreen .page-nav{bottom:28px;padding:12px 28px;gap:28px;border-radius:44px}
+    :fullscreen .page-nav button{font-size:46px;min-width:88px;min-height:76px}
+    :fullscreen .page-nav span{font-size:22px;min-width:130px}
+    .page-nav.idle{opacity:0;pointer-events:none}
+    #blackout-pres{position:absolute;inset:0;background:#000;z-index:100;display:none;cursor:none}
+    #blackout-pres.show{display:block}
+    #blackout-pres.awake{cursor:default}
+    #blackout-pres .bo-hint{position:absolute;bottom:20px;left:0;right:0;text-align:center;font-size:13px;color:#666;opacity:0;transition:opacity .3s;pointer-events:none}
+    #blackout-pres.awake .bo-hint{opacity:1}
+    #bo-show{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.12);color:#ddd;border:1px solid #444;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;opacity:0;transition:opacity .3s}
+    #blackout-pres.awake #bo-show{opacity:1}
+    .fs-bar{position:absolute;top:10px;right:10px;z-index:150;display:none;gap:8px;align-items:center}
+    :fullscreen .fs-bar{display:flex}
+    .fs-bar .fs-file-btn{position:static;display:flex}
+    #presenter.is-black .fs-bar{display:none !important}
+    #guest:fullscreen .guest-label{display:none}
+    body.presenter-black .toast{display:none !important}
+    #black-btn.on,#black-ann-btn.on{background:#EAB308;color:#111;border-color:#EAB308}
+    .ann-black-banner{background:#EAB308;color:#111;font-size:12px;font-weight:700;padding:3px 10px;text-align:center;display:none;flex-shrink:0}
+    #drawer.blackout .ann-black-banner{display:block}
+    #drawer.blackout .area{opacity:.3}
+    #guest:fullscreen .guest-info,#guest:fullscreen .guest-bar{display:none}
+    #guest.ask:fullscreen .guest-bar{display:flex}
+    #guest.blackout #guest-view-wrap,#guest.blackout #guest-wb-wrap{visibility:hidden}
+    #guest-black-msg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:#555;font-size:16px;z-index:12;pointer-events:none;text-align:center;padding:20px}
+    #guest.blackout #guest-black-msg{display:flex}
+    .up-row{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--border)}
+    .up-row .tool-btn{flex:1;padding:9px 6px}
+    #up-prog{padding:0 16px 12px;display:none}
+    .up-bar{height:8px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden}
+    #up-bar-fill{height:100%;width:0;background:var(--blue);transition:width .15s}
+    #up-txt{font-size:11px;color:var(--gray);margin-top:5px}
+
     /* people panel + reconnect banner */
     .ppl-row{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid rgba(42,63,107,.5);font-size:13px}
     .ppl-foot{padding:10px 14px;display:flex;flex-direction:column;gap:8px}
@@ -380,6 +418,7 @@
       💬<span class="q-count" id="q-count-pres" style="display:none">0</span>
     </button>
     <button class="icon-btn" onclick="clearPresenter()"    title="Clear">🗑️</button>
+    <button class="icon-btn" id="black-btn" onclick="setBlackout(!blackOut)" title="Black screen (B)" style="font-size:12px">⬛ B</button>
     <button class="icon-btn" onclick="toggleFullscreen()"  title="Fullscreen">⛶</button>
     <button class="icon-btn" onclick="presenterExit()" title="End session">✕</button>
   </div>
@@ -407,6 +446,10 @@
     <span id="page-info">Slide 1/1</span>
     <button onclick="changePage(+1)">›</button>
   </div>
+  <div id="blackout-pres">
+    <div class="bo-hint">⬛ Black screen — press <b>B</b> or <b>Esc</b> to show the slide again</div>
+    <button id="bo-show" onclick="setBlackout(false)">⬜ Show screen</button>
+  </div>
   <div id="qr-panel" class="hidden">
     <div class="qr-title">Room code — share with everyone</div>
     <div class="room-code" id="room-code-display"></div>
@@ -419,6 +462,8 @@
   <button class="fs-file-btn" onclick="toggleDeckPanel()">📁 Files <span id="fs-cur-name" style="color:var(--lblue);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></button>
 
   <button class="fs-file-btn" style="right:130px" onclick="togglePeoplePanel()">👥 People</button>
+  <button class="fs-file-btn" onclick="setBlackout(true)">⬛ Black</button>
+  <button class="fs-file-btn" onclick="toggleQR()">📱 Code</button>
 
   <!-- PEOPLE PANEL (presenter) -->
   <div class="deck-panel hidden" id="people-panel">
@@ -429,6 +474,7 @@
       <button class="tool-btn" onclick="kickAnnotator()">Remove annotator</button>
       <button class="tool-btn ppl-danger" onclick="kickEveryone()">Remove everyone</button>
       <label class="ppl-lock"><input type="checkbox" id="room-lock" onchange="setRoomLock(this.checked)"> 🔒 Lock room (no new joins)</label>
+      <label class="ppl-lock"><input type="checkbox" id="allow-files" checked onchange="allowAnnotatorFiles=this.checked;toast(this.checked?'📁 Annotator can add files':'📁 Annotator cannot add files',2000)"> 📁 Annotator can add files</label>
     </div>
   </div>
 
@@ -504,10 +550,18 @@
       <div class="draw-deck-list" id="draw-deck-list">
         <div class="deck-empty">No files loaded by presenter yet.</div>
       </div>
+      <div class="up-row">
+        <button class="tool-btn" id="up-pdf-btn" onclick="document.getElementById('ann-pdf-file').click()">＋ Add PDF</button>
+        <button class="tool-btn" id="up-img-btn" onclick="document.getElementById('ann-img-file').click()">＋ Add PPT slides (images)</button>
+      </div>
+      <div id="up-prog"><div class="up-bar"><div id="up-bar-fill"></div></div><div id="up-txt"></div></div>
+      <input type="file" id="ann-pdf-file" accept="application/pdf" style="display:none" onchange="annotatorUpload(this,'pdf')">
+      <input type="file" id="ann-img-file" accept="image/*" multiple style="display:none" onchange="annotatorUpload(this,'images')">
     </div>
   </div>
 
   <!-- Main adaptive area: portrait = column, landscape = row (via CSS) -->
+  <div class="ann-black-banner">⬛ Black screen ON — the audience sees black</div>
   <div id="drawer-main">
     <div id="drawer-left">
       <div class="mode-bar">
@@ -575,6 +629,7 @@
     <span class="zoom-lbl" id="zoom-lbl">1×</span>
     <button class="tool-btn" onclick="zoomBy(1)" title="Zoom in">🔍+</button>
     <button class="tool-btn" id="pan-btn" onclick="togglePan()" title="Move around a zoomed slide">✋</button>
+    <button class="tool-btn" id="black-ann-btn" onclick="requestBlackout(!blackOutState)" title="Black screen for the audience (B)">⬛ Black</button>
     <button class="tool-btn" id="focus-btn" onclick="toggleFocus()" title="Focus: hide Q&amp;A and messages for a bigger drawing area">⤢ Focus<span class="q-count" id="focus-badge" style="display:none">0</span></button>
   </div>
 
@@ -587,8 +642,12 @@
     <span class="bar-title"  id="guest-status">Connecting…</span>
     <span id="guest-badge" class="badge badge-guest">Guest</span>
     <span id="guest-pg-info" style="font-size:11px;color:var(--gray);flex:1"></span>
+    <button class="icon-btn" onclick="guestFullscreen()" title="Full screen">⛶</button>
     <button class="icon-btn" onclick="goHome()" title="Leave session" style="color:#EF4444">✕ Leave</button>
   </div>
+  <button class="fs-file-btn" onclick="toggleGuestAsk()">💬 Ask a question</button>
+  <button class="fs-file-btn" onclick="guestFullscreen()">⛶ Exit full screen</button>
+  <div id="guest-black-msg">⬛ The presenter paused the screen</div>
   <!-- Announcement from presenter to guests -->
   <div class="guest-announce" id="guest-announce">
     <div style="font-size:20px">📢</div>
@@ -919,26 +978,8 @@ async function switchDeck(i){
 }
 
 // PDF / IMAGE LOADING — now adds to decks
-async function addPDF(input){
-  const file=input.files[0];if(!file)return;input.value='';
-  toast('⏳ Loading '+file.name+'…');
-  const buf=await file.arrayBuffer();
-  const doc=await pdfjsLib.getDocument({data:buf}).promise;
-  const deck={name:file.name,type:'pdf',pdfDoc:doc,slides:[],totalPages:doc.numPages};
-  decks.push(deck);
-  await switchDeck(decks.length-1);
-}
-async function addImages(input){
-  const files=Array.from(input.files);if(!files.length)return;input.value='';
-  files.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
-  const name=`PPT Slides (${files.length} slides)`;
-  toast('⏳ Loading '+files.length+' slides…');
-  const slides=await Promise.all(files.map(f=>new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(f)})));
-  const deck={name,type:'images',pdfDoc:null,slides,totalPages:files.length};
-  decks.push(deck);
-  await switchDeck(decks.length-1);
-  toast(`📊 ${files.length} slides loaded!`);
-}
+
+
 
 // Keep old handler names pointing to new functions
 function loadPDF(input){addPDF(input)}
@@ -1021,10 +1062,10 @@ async function sendPageToConn(c,isGuest=false){
 const GCHUNK = 6000; // 6KB per chunk — safe for all platforms
 
 function sendLowResToGuest(c){
-  if(!c||c.open===false)return;
+  if(!c||c.open===false||blackOut)return;   // black screen: nothing is sent to guests
   if(!pdfCanvas.width||!pdfCanvas.height)return;
   // Small canvas for guests: max 320px wide
-  const maxW=640;
+  const maxW=c._hd?1280:640;
   const scale=Math.min(1,maxW/Math.max(pdfCanvas.width,1));
   const tmp=document.createElement('canvas');
   tmp.width=Math.max(1,Math.round(pdfCanvas.width*scale));
@@ -1032,7 +1073,7 @@ function sendLowResToGuest(c){
   const ctx=tmp.getContext('2d');
   ctx.drawImage(pdfCanvas,0,0,tmp.width,tmp.height);
   ctx.drawImage(overlayCanvas,0,0,tmp.width,tmp.height);
-  const url=tmp.toDataURL('image/jpeg',.55);
+  const url=tmp.toDataURL('image/jpeg',c._hd?.7:.55);
   _sendChunked(c,{type:'page_image',page:currentPage,total:totalPages,contentType},url);
 }
 
@@ -1083,14 +1124,14 @@ function sendWbSnapshotThrottled(){
 }
 
 function sendWbSnapshotToConn(c,lowRes=false){
-  if(!c||c.open===false)return;
+  if(!c||c.open===false||(lowRes&&blackOut))return;
   const wc=document.getElementById('wb-canvas-pres');if(!wc.width)return;
   if(lowRes){
-    const maxW=720,scale=Math.min(1,maxW/wc.width);
+    const maxW=c._hd?1280:720,scale=Math.min(1,maxW/wc.width);
     const tmp=document.createElement('canvas');
     tmp.width=Math.round(wc.width*scale);tmp.height=Math.round(wc.height*scale);
     tmp.getContext('2d').drawImage(wc,0,0,tmp.width,tmp.height);
-    c.send({type:'wb_snapshot',aspect:wc.height/wc.width,dataURL:tmp.toDataURL('image/jpeg',.5)});
+    c.send({type:'wb_snapshot',aspect:wc.height/wc.width,dataURL:tmp.toDataURL('image/jpeg',c._hd?.7:.5)});
   } else {
     c.send({type:'wb_snapshot',aspect:wc.height/wc.width,dataURL:wc.toDataURL('image/jpeg',.78)});
   }
@@ -1102,6 +1143,8 @@ function handlePresenterDrawData(data){
   if(data.type==='page_request'){changePage(data.delta);return}
   if(data.type==='deck_switch_request'){switchDeck(data.index);return}
   if(data.type==='wb_refresh_request'){if(annotatorConn)sendWbSnapshotToConn(annotatorConn,false);return}
+  if(data.type==='xfer_start'||data.type==='xfer_chunk'||data.type==='xfer_end'){handleXfer(data);return}
+  if(data.type==='blackout_request'){setBlackout(!!data.on);return}
   if(data.type==='guest_refresh_request'){
     // Find this guest's conn and resend
     guestConns.forEach(c=>{if(c.peer===data._from||c===annotatorConn){}});
@@ -1192,6 +1235,9 @@ const drawCanvas=document.getElementById('draw-canvas');
 const wbCanvasDraw=document.getElementById('wb-canvas-draw');
 
 function handleDrawerData(data){
+  if(data.type==='blackout'){applyAnnBlackout(data.on);return}
+  if(data.type==='xfer_ack'||data.type==='xfer_done'){handleXferReply(data);return}
+  if(data.type==='mode_set'&&typeof data.blackout!=='undefined')applyAnnBlackout(data.blackout);
   if(data.type==='mode_set'){
     drawerMode=data.mode;
     const pdw=document.getElementById('draw-wrap');const wbw=document.getElementById('wb-draw-wrap');
@@ -1316,7 +1362,7 @@ let zoomLevel=1,panMode=false,wbAspect=0.5625,notifs=[],focusUnseen=0;
 const ZOOMS=[1,1.5,2,3];
 
 function wbAspectNow(){const wc=_el('wb-canvas-pres');return(wc&&wc.width)?wc.height/wc.width:0.5625}
-function modeMsg(mode,extra){return Object.assign({type:'mode_set',mode,aspect:wbAspectNow()},extra||{})}
+function modeMsg(mode,extra){return Object.assign({type:'mode_set',mode,aspect:wbAspectNow(),blackout:blackOut},extra||{})}
 
 // ── join diagnostics overlay ──
 function jdLog(msg,cls){const l=_el('jd-log');const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});l.insertAdjacentHTML('beforeend','<div class="'+(cls||'')+'">'+t+'  '+escHtml(msg)+'</div>');l.scrollTop=l.scrollHeight}
@@ -1362,6 +1408,8 @@ function joinAsAnnotatorFromHash(){
 
 // ── guest ──
 function handleGuestData(d){
+  if(d.type==='blackout'){applyGuestBlackout(d.on);return}
+  if(d.type==='wb_snapshot')window._gLastWb=d.dataURL;
   if(d.type==='img_start'){
     _gBuf[d.id]={n:d.n,page:d.page,total:d.total,chunks:new Array(d.n),got:0};
     _el('guest-wait-txt').textContent='Receiving slide…';
@@ -1376,6 +1424,7 @@ function handleGuestData(d){
   }
   if(d.type==='mode_set'){
     if(d.guestNum){myGuestNum=d.guestNum;_el('guest-badge').textContent='Guest #'+d.guestNum}
+    if(typeof d.blackout!=='undefined')applyGuestBlackout(d.blackout);
     handleGuestModeSet(d.mode);
     clearTimeout(window._gRetry);
     window._gRetry=setTimeout(()=>{if(!guestHasImage)_el('guest-refresh-btn').style.display='block'},5000);
@@ -1401,6 +1450,7 @@ function handleGuestData(d){
   }
 }
 function _displayGuestImage(url,page,total){
+  window._gLast={url,page,total};
   const img=new Image();
   img.onload=()=>{
     const wrap=_el('guest-view-wrap'),gc=_el('guest-canvas');
@@ -1674,6 +1724,7 @@ function attemptJoin(attempt){
       if(done||stale())return;opened=true;clearTimeout(connT);
       log('Linked to presenter in '+Math.round(performance.now()-t0)+' ms.','ok');
       conn.send({type:'identify',role,password,guestNum:role==='guest'?myGuestNum:0});
+      if(role==='guest'&&document.fullscreenElement)setTimeout(()=>{try{conn.send({type:'guest_quality',hd:true})}catch(e){}},300);
       const was=lastJoin.silent;lastJoin.silent=false;setReconnectBanner(false);jdHide();
       _el(role==='guest'?'guest-dot':'draw-dot').className='status-dot online';
       _el(role==='guest'?'guest-status':'draw-status').textContent='Room '+code;
@@ -1698,7 +1749,7 @@ function attemptJoin(attempt){
 
 function resetClientUI(){
   joinToken++;lastJoin=null;jdHide();stopKeepalive();setReconnectBanner(false);releaseWake();
-  clearInterval(presWatch);presWatch=null;roomLocked=false;
+  clearInterval(presWatch);presWatch=null;roomLocked=false;blackOut=false;blackOutState=false;allowAnnotatorFiles=true;xfers={};upState=null;document.body.classList.remove('presenter-black');const bo=_el('blackout-pres');if(bo)bo.classList.remove('show','awake');['presenter','drawer','guest'].forEach(id=>{const e=_el(id);if(e)e.classList.remove('blackout','is-black','ask')});const af=_el('allow-files');if(af)af.checked=true;
   const lk=_el('room-lock');if(lk)lk.checked=false;const pp=_el('people-panel');if(pp)pp.classList.add('hidden');
   zoomLevel=1;panMode=false;myGuestNum=0;guestHasImage=false;_gBuf={};notifs=[];focusUnseen=0;
   const d=_el('drawer');if(d)d.classList.remove('focus','pan');
@@ -1804,7 +1855,7 @@ function startPresenter(mode){
           else if(presMode==='wb'){initWbPresCanvas();sendWbSnapshot()}
           // send existing questions to annotator
           if(questions.length)c.send({type:'all_questions',questions});
-          c.on('close',()=>{if(annotatorConn===c){annotatorConn=null;updatePresenterBadge();if(!c._kicked)toast('Annotator left')}});
+          c.on('close',()=>{if(annotatorConn===c){annotatorConn=null;xfers={};updatePresenterBadge();if(!c._kicked)toast('Annotator left')}});
         } else if(d.role==='guest'){
           // a reconnecting guest keeps its number when it is free
           const want=parseInt(d.guestNum,10);let gNum;
@@ -1824,6 +1875,8 @@ function startPresenter(mode){
         addQuestionToUI(q);
         if(annotatorConn)annotatorConn.send({type:'new_question',question:q});
         toast(`💬 Question from Guest #${c._gnum}`);
+      } else if(d.type==='guest_quality'){
+        if(guestConns.has(c.peer)){c._hd=!!d.hd;setTimeout(()=>{if(presMode==='wb')sendWbSnapshotToConn(c,true);else sendLowResToGuest(c)},200)}
       } else if(d.type==='guest_refresh_request'){
         if(guestConns.has(c.peer))setTimeout(()=>sendLowResToGuest(c),300);
       } else if(c===annotatorConn){
@@ -1832,6 +1885,206 @@ function startPresenter(mode){
     });
   });
 }
+
+// ═══════════════ v17: ANNOTATOR FILES, GUEST FULL SCREEN, KEYBOARD, BLACK SCREEN ═══════════════
+const _sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const MAX_XFER=30*1024*1024;
+let allowAnnotatorFiles=true,xfers={},upState=null,blackOut=false,blackOutState=false,navIdleT=null,boT=null;
+const fmtMB=b=>(b/1048576).toFixed(b<10485760?1:0)+' MB';
+
+// ── presenter: add files (local pickers and annotator uploads share these) ──
+async function addPDFFromBuffer(buf,name){
+  const doc=await pdfjsLib.getDocument({data:buf}).promise;
+  decks.push({name,type:'pdf',pdfDoc:doc,slides:[],totalPages:doc.numPages});
+  await switchDeck(decks.length-1);
+}
+async function addPDF(input){
+  const file=input.files[0];if(!file)return;input.value='';
+  toast('⏳ Loading '+file.name+'…');
+  await addPDFFromBuffer(await file.arrayBuffer(),file.name);
+}
+async function addImageBlobs(list){
+  list.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+  const name='PPT Slides ('+list.length+' slides)';
+  const slides=await Promise.all(list.map(f=>new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(f.blob)})));
+  decks.push({name,type:'images',pdfDoc:null,slides,totalPages:list.length});
+  await switchDeck(decks.length-1);
+  toast('📊 '+list.length+' slides loaded!');
+}
+async function addImages(input){
+  const files=Array.from(input.files);if(!files.length)return;input.value='';
+  toast('⏳ Loading '+files.length+' slides…');
+  await addImageBlobs(files.map(f=>({name:f.name,blob:f})));
+}
+
+// ── presenter: receive files from the verified annotator ──
+function xferReply(m){if(annotatorConn){try{annotatorConn.send(m)}catch(e){}}}
+function handleXfer(d){
+  if(d.type==='xfer_start'){
+    const files=Array.isArray(d.files)?d.files:[];const total=files.reduce((a,f)=>a+(+f.size||0),0);
+    let why='';
+    if(!allowAnnotatorFiles)why='The presenter has turned off file adding.';
+    else if(!files.length||files.length>200||(d.kind==='pdf'&&files.length!==1)||(d.kind!=='pdf'&&d.kind!=='images'))why='Invalid file request.';
+    else if(total>MAX_XFER)why='Too large ('+fmtMB(total)+'). The limit is '+fmtMB(MAX_XFER)+'.';
+    if(why){xferReply({type:'xfer_ack',id:d.id,ok:false,reason:why});return}
+    xfers[d.id]={id:d.id,kind:d.kind,name:d.name,files:files.map(f=>({name:String(f.name||'file'),size:+f.size||0,chunks:[],got:0,n:null}))};
+    xferReply({type:'xfer_ack',id:d.id,ok:true});
+    toast('📥 Annotator is sending '+d.name+' ('+fmtMB(total)+')…',4000);
+    return;
+  }
+  const x=xfers[d.id];if(!x)return;
+  if(d.type==='xfer_chunk'){const f=x.files[d.f];if(!f)return;if(f.n==null)f.n=d.n;if(!f.chunks[d.i]){f.chunks[d.i]=d.d;f.got++}return}
+  if(d.type==='xfer_end'){
+    delete xfers[d.id];
+    completeXfer(x).then(()=>xferReply({type:'xfer_done',id:x.id,name:x.name})).catch(e=>{toast('⚠️ Could not add the annotator\'s file: '+e.message,6000);xferReply({type:'xfer_ack',id:x.id,ok:false,reason:'The presenter could not open the file ('+e.message+').'})});
+  }
+}
+async function completeXfer(x){
+  const blobs=x.files.map(f=>{if(f.n==null||f.got!==f.n)throw new Error('file parts missing');const b=new Blob(f.chunks);if(b.size!==f.size)throw new Error('size mismatch');return b});
+  if(x.kind==='pdf')await addPDFFromBuffer(await blobs[0].arrayBuffer(),x.files[0].name);
+  else await addImageBlobs(x.files.map((f,i)=>({name:f.name,blob:blobs[i]})));
+}
+
+// ── annotator: send files to the presenter ──
+function setUploadUI(show,txt,frac){
+  _el('up-prog').style.display=show?'block':'none';
+  if(show){_el('up-txt').textContent=txt||'';_el('up-bar-fill').style.width=Math.round((frac||0)*100)+'%'}
+  ['up-pdf-btn','up-img-btn'].forEach(id=>{const b=_el(id);if(b)b.disabled=!!show});
+}
+async function annotatorUpload(input,kind){
+  const files=Array.from(input.files);input.value='';
+  if(!files.length)return;
+  if(upState){toast('An upload is already running');return}
+  if(!clientConn||clientConn.open===false){toast('Not connected to the presenter');return}
+  if(kind==='pdf')files.length=1;
+  const total=files.reduce((a,f)=>a+f.size,0);
+  if(total>MAX_XFER){toast('⚠️ Too large: '+fmtMB(total)+' (limit '+fmtMB(MAX_XFER)+')',5000);return}
+  const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const name=kind==='pdf'?files[0].name:'PPT Slides ('+files.length+')';
+  const st=upState={id,ackOk:null,reason:'',done:false,failed:''};
+  const fail=m=>{setUploadUI(false);upState=null;toast('🚫 '+m,6000)};
+  try{
+    setUploadUI(true,'Asking the presenter…',0);
+    clientConn.send({type:'xfer_start',id,kind,name,files:files.map(f=>({name:f.name,size:f.size,type:f.type}))});
+    let t0=Date.now();while(st.ackOk===null&&Date.now()-t0<10000)await _sleep(100);
+    if(!st.ackOk){fail(st.reason||'The presenter did not answer');return}
+    const CH=48*1024;let sent=0;
+    for(let fi=0;fi<files.length;fi++){
+      const buf=await files[fi].arrayBuffer();const n=Math.max(1,Math.ceil(buf.byteLength/CH));
+      for(let i=0;i<n;i++){
+        if(!clientConn||clientConn.open===false||upState!==st){fail('Upload interrupted — the connection dropped');return}
+        const part=buf.slice(i*CH,(i+1)*CH);
+        clientConn.send({type:'xfer_chunk',id,f:fi,i,n,d:part});sent+=part.byteLength;
+        const dc=clientConn.dataChannel;while(dc&&dc.bufferedAmount>1048576)await _sleep(25);   // do not flood the channel
+        if(i%6===0){setUploadUI(true,'Sending '+fmtMB(sent)+' of '+fmtMB(total),sent/total);await _sleep(0)}
+      }
+    }
+    clientConn.send({type:'xfer_end',id});setUploadUI(true,'Presenter is opening the file…',1);
+    t0=Date.now();while(!st.done&&!st.failed&&Date.now()-t0<90000)await _sleep(150);
+    if(st.failed){fail(st.failed);return}
+    if(!st.done){fail('The presenter did not confirm the file');return}
+    setUploadUI(false);upState=null;toast('✅ "'+name+'" added to the room',3500);
+  }catch(e){fail(e.message||'Upload failed')}
+}
+function handleXferReply(d){
+  const st=upState;if(!st||d.id!==st.id)return;
+  if(d.type==='xfer_ack'){if(st.ackOk===null){st.ackOk=!!d.ok;st.reason=d.reason||''}else if(!d.ok)st.failed=d.reason||'The presenter could not open the file'}
+  else if(d.type==='xfer_done')st.done=true;
+}
+
+// ── guest: full screen (sharper image while in full screen) ──
+function guestFullscreen(){
+  const el=_el('guest');
+  if(!document.fullscreenElement)el.requestFullscreen().catch(()=>toast('Full screen is not available in this browser'));
+  else document.exitFullscreen();
+}
+function toggleGuestAsk(){
+  const g=_el('guest');g.classList.toggle('ask');
+  if(g.classList.contains('ask'))setTimeout(()=>_el('guest-q-input').focus(),120);
+  setTimeout(refitGuest,150);
+}
+function refitGuest(){
+  if(window._gLast)_displayGuestImage(window._gLast.url,window._gLast.page,window._gLast.total);
+  if(window._gLastWb&&_el('guest-wb-wrap').classList.contains('on'))handleGuestData({type:'wb_snapshot',dataURL:window._gLastWb});
+}
+window.addEventListener('resize',()=>{if(_el('guest').classList.contains('active'))refitGuest()});
+
+// ── black screen (presenter or annotator can toggle; the presenter decides) ──
+function wakeBlackBtn(){const o=_el('blackout-pres');o.classList.add('awake');clearTimeout(boT);boT=setTimeout(()=>o.classList.remove('awake'),2500)}
+_el('blackout-pres').addEventListener('pointermove',wakeBlackBtn);
+function setBlackout(on){
+  blackOut=!!on;
+  _el('blackout-pres').classList.toggle('show',blackOut);
+  _el('presenter').classList.toggle('is-black',blackOut);
+  document.body.classList.toggle('presenter-black',blackOut);
+  const b=_el('black-btn');if(b)b.classList.toggle('on',blackOut);
+  if(blackOut)wakeBlackBtn();else{wakeNav();setTimeout(resumeGuests,150)}
+  const msg={type:'blackout',on:blackOut};
+  if(annotatorConn){try{annotatorConn.send(msg)}catch(e){}}
+  guestConns.forEach(c=>{try{c.send(msg)}catch(e){}});
+}
+function resumeGuests(){
+  if(blackOut)return;
+  if(presMode==='wb'){guestConns.forEach(c=>sendWbSnapshotToConn(c,true))}
+  else if(pdfDoc||imgSlides.length){let i=0;guestConns.forEach(c=>setTimeout(()=>sendLowResToGuest(c),i++*60))}
+}
+function requestBlackout(on){if(clientConn&&clientConn.open!==false)clientConn.send({type:'blackout_request',on:!!on});else toast('Not connected')}
+function applyAnnBlackout(on){
+  blackOutState=!!on;_el('drawer').classList.toggle('blackout',blackOutState);relayoutDrawer();
+  const b=_el('black-ann-btn');if(b)b.classList.toggle('on',blackOutState);
+  if(blackOutState)toast('⬛ Black screen ON — the audience sees black',2500);
+}
+function applyGuestBlackout(on){
+  _el('guest').classList.toggle('blackout',!!on);
+  if(on){
+    ['guest-canvas','guest-wb-canvas'].forEach(id=>{const c=_el(id);c.getContext('2d').clearRect(0,0,c.width,c.height)});
+    window._gLast=null;window._gLastWb=null;guestHasImage=false;_gBuf={};
+  }else if(!guestHasImage){const w=_el('guest-waiting');if(w)w.classList.remove('hidden');const t=_el('guest-wait-txt');if(t)t.textContent='Resuming…'}
+}
+
+// ── presenter navigation: big buttons that fade in full screen + keyboard / presentation clicker ──
+function wakeNav(){
+  const n=_el('page-nav');if(!n)return;
+  n.classList.remove('idle');clearTimeout(navIdleT);
+  if(document.fullscreenElement&&_el('presenter').classList.contains('active')&&!blackOut)navIdleT=setTimeout(()=>n.classList.add('idle'),2500);
+}
+['pointermove','pointerdown','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,wakeNav,{passive:true}));
+// group the floating full-screen buttons so they can never overlap
+(function(){['presenter','guest'].forEach(id=>{const root=_el(id);const btns=[...root.children].filter(e=>e.classList&&e.classList.contains('fs-file-btn'));if(btns.length>1){const bar=document.createElement('div');bar.className='fs-bar';root.insertBefore(bar,btns[0]);btns.forEach(b=>{b.style.right='';bar.appendChild(b)})}})})();
+document.addEventListener('fullscreenchange',()=>{
+  wakeNav();
+  if(document.fullscreenElement&&document.fullscreenElement.id==='presenter')_el('qr-panel').classList.add('hidden');
+  if(lastJoin&&lastJoin.role==='guest'){
+    const fs=!!document.fullscreenElement;
+    if(clientConn&&clientConn.open!==false)try{clientConn.send({type:'guest_quality',hd:fs})}catch(e){}
+    if(!fs)_el('guest').classList.remove('ask');
+    setTimeout(refitGuest,200);
+  }
+});
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const tg=e.target,tag=tg&&tg.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||(tg&&tg.isContentEditable))return;
+  if(!_el('pw-overlay').classList.contains('hidden')||!_el('ann-overlay').classList.contains('hidden'))return;
+  const onPres=_el('presenter').classList.contains('active'),onDraw=_el('drawer').classList.contains('active');
+  if(!onPres&&!onDraw)return;
+  const k=e.key,noBtn=(tg===document.body||tg===document.documentElement||!tag);   // Space/Enter only when no button has focus
+  const nextK=k==='ArrowRight'||k==='ArrowDown'||k==='PageDown'||((k===' '||k==='Enter')&&noBtn);
+  const prevK=k==='ArrowLeft'||k==='ArrowUp'||k==='PageUp'||k==='Backspace';
+  if(onPres){
+    if(nextK){e.preventDefault();if(presMode==='pdf')changePage(1);return}
+    if(prevK){e.preventDefault();if(presMode==='pdf')changePage(-1);return}
+    if(k==='Home'){e.preventDefault();if(presMode==='pdf'&&currentPage!==1)changePage(1-currentPage);return}
+    if(k==='End'){e.preventDefault();if(presMode==='pdf'&&currentPage!==totalPages)changePage(totalPages-currentPage);return}
+    if(k==='b'||k==='B'||k==='.'){e.preventDefault();setBlackout(!blackOut);return}
+    if(k==='Escape'&&blackOut){e.preventDefault();setBlackout(false);return}
+    if(k==='f'||k==='F'){e.preventDefault();toggleFullscreen();return}
+  }else if(onDraw){
+    if(nextK&&k!==' '&&k!=='Enter'){e.preventDefault();requestPage(1);return}
+    if(prevK){e.preventDefault();requestPage(-1);return}
+    if(k==='b'||k==='B'||k==='.'){e.preventDefault();requestBlackout(!blackOutState);return}
+  }
+});
 
 // ── PASSWORD SYSTEM ──
 let presPassword='';   // set by presenter
