@@ -55,6 +55,18 @@
     #pdf-wrap{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
     #pdf-canvas{display:block}
     #overlay-canvas{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+    #vid-layer{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:none;background:#000}
+    #vid-layer video,#vid-layer iframe,#vid-layer #yt-box{width:100%;height:100%;border:0;display:block;background:#000}
+    .vid-ctl{display:none;flex-direction:column;gap:6px;padding:8px 10px;background:rgba(11,30,61,.98);border-bottom:1px solid var(--border);flex-shrink:0}
+    .vid-ctl.on{display:flex}
+    .vid-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .vid-btn{background:rgba(255,255,255,.08);border:1px solid var(--border);color:#fff;border-radius:8px;padding:6px 12px;font-size:14px;min-height:40px;cursor:pointer}
+    .vid-main{font-size:20px;min-width:60px;background:#2563EB;border-color:#2563EB}
+    .vid-time{color:#cbd5e1;font-size:13px;font-variant-numeric:tabular-nums;margin-left:auto}
+    #vid-seek{width:100%;height:28px}
+    #vid-vol{width:90px}
+    .vid-hint{font-size:12px;color:#9fb3d1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #drawer.vid-playing #draw-canvas{cursor:not-allowed}
     #wb-wrap{flex:1;position:relative;overflow:hidden;display:none;align-items:center;justify-content:center;background:#fff}
     #wb-wrap.on{display:flex}
     #wb-canvas-pres{display:block}
@@ -425,16 +437,20 @@
 
   <div id="pdf-wrap">
     <canvas id="pdf-canvas"></canvas>
+    <div id="vid-layer"></div>
     <canvas id="overlay-canvas"></canvas>
     <div class="upload-overlay" id="upload-overlay">
       <p>📂 Load your content</p>
       <div class="upload-btns">
         <button class="btn btn-primary" onclick="document.getElementById('pdf-file').click()">📄 PDF</button>
         <button class="btn btn-wb"      onclick="document.getElementById('img-file').click()">📊 PPT (as images)</button>
+        <button class="btn btn-wb"      onclick="document.getElementById('vid-file').click()">🎬 Video</button>
+        <button class="btn btn-wb"      onclick="addVideoLink()">🔗 YouTube</button>
       </div>
       <p>For PPT: Export slides as PNG in PowerPoint,<br>then select all images here.</p>
       <input type="file" id="pdf-file" accept="application/pdf" style="display:none" onchange="loadPDF(this)">
       <input type="file" id="img-file" accept="image/*" multiple style="display:none" onchange="loadImages(this)">
+      <input type="file" id="vid-file" accept="video/*,.mp4,.m4v,.webm,.mov" multiple style="display:none" onchange="addVideoFile(this)">
     </div>
   </div>
   <div id="wb-wrap">
@@ -455,6 +471,7 @@
     <div class="room-code" id="room-code-display"></div>
     <div id="qrcode"></div>
     <div class="qr-hint">Annotator → Join as Annotator<br>Guest → Join as Guest</div>
+    <div class="qr-hint" id="hub-hint"></div>
   </div>
 
   <!-- Q&A backdrop -->
@@ -490,6 +507,8 @@
     <div class="deck-add-row">
       <button class="deck-add-btn" onclick="document.getElementById('pdf-file-add').click()">+ PDF</button>
       <button class="deck-add-btn" onclick="document.getElementById('img-file-add').click()">+ PPT Slides</button>
+      <button class="deck-add-btn" onclick="document.getElementById('vid-file').click()">+ Video</button>
+      <button class="deck-add-btn" onclick="addVideoLink()">+ YouTube</button>
     </div>
     <input type="file" id="pdf-file-add" accept="application/pdf" style="display:none" onchange="addPDF(this)">
     <input type="file" id="img-file-add" accept="image/*" multiple style="display:none" onchange="addImages(this)">
@@ -575,6 +594,18 @@
           <div class="pg-total" id="draw-pg-total">/ 1 slides</div>
         </div>
         <button class="slide-btn" onclick="requestPage(+1)">›</button>
+      </div>
+      <div class="vid-ctl" id="vid-ctl">
+        <div class="vid-row">
+          <button class="vid-btn" onclick="annVidCmd('skip',-10)">⏪ 10</button>
+          <button class="vid-btn vid-main" id="vid-play" onclick="annVidCmd('toggle')">▶</button>
+          <button class="vid-btn" onclick="annVidCmd('skip',10)">10 ⏩</button>
+          <span class="vid-time" id="vid-time">0:00 / 0:00</span>
+          <button class="vid-btn" id="vid-mute" onclick="annVidCmd('mute',!(annVid.muted))">🔊</button>
+          <input type="range" id="vid-vol" min="0" max="100" value="100" oninput="annVidVol(this.value)">
+        </div>
+        <input type="range" id="vid-seek" min="0" max="1000" value="0" oninput="annVidSeeking=true" onchange="annVidSeekTo(this.value)">
+        <div class="vid-hint" id="vid-hint">🎬 Video</div>
       </div>
       <div class="area" id="draw-wrap">
         <div class="stage" id="draw-stage">
@@ -732,6 +763,88 @@ document.addEventListener('keydown',e=>{
 
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+// ═══════════════ v19: OFFLINE MODE (laptop hub) ═══════════════
+// When this page is served by hub.js on the presenter laptop, window.HUB_MODE is set by the hub.
+// HubPeer then replaces PeerJS: same API, but every message goes through the hub's WebSocket on the
+// local Wi-Fi — no internet, no signaling server, no STUN/TURN. The rest of the app is unchanged.
+let HUB_KEY=null;
+if(window.HUB_MODE){
+  try{HUB_KEY=window.HUB_KEY||(location.hash.match(/[#&]k=([A-Za-z0-9]+)/)||[])[1]||sessionStorage.getItem('hubKey')||null}catch(e){}
+  if(HUB_KEY){HUB_KEY=HUB_KEY.toUpperCase();try{sessionStorage.setItem('hubKey',HUB_KEY)}catch(e){}}
+}
+function _hubEnc(v){
+  if(v instanceof ArrayBuffer||ArrayBuffer.isView(v)){
+    const u=v instanceof ArrayBuffer?new Uint8Array(v):new Uint8Array(v.buffer,v.byteOffset,v.byteLength);
+    let s='';for(let i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));
+    return{__b64:btoa(s)};
+  }
+  if(Array.isArray(v))return v.map(_hubEnc);
+  if(v&&typeof v==='object'){const o={};for(const k in v)o[k]=_hubEnc(v[k]);return o}
+  return v;
+}
+function _hubDec(v){
+  if(v&&typeof v==='object'){
+    if(typeof v.__b64==='string'){const s=atob(v.__b64),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u.buffer}
+    if(Array.isArray(v))return v.map(_hubDec);
+    const o={};for(const k in v)o[k]=_hubDec(v[k]);return o;
+  }
+  return v;
+}
+class HubEmitter{
+  on(ev,fn){(this._h||(this._h={}))[ev]=(this._h[ev]||[]).concat(fn);return this}
+  _emit(ev,...a){((this._h||{})[ev]||[]).slice().forEach(f=>{try{f(...a)}catch(e){console.error(e)}})}
+}
+class HubConn extends HubEmitter{
+  constructor(p,remote,cid){super();this._p=p;this.peer=remote;this.cid=cid;this.open=false;this._closed=false;
+    this.dataChannel={get bufferedAmount(){return p._ws?p._ws.bufferedAmount:0}}}
+  send(d){if(this.open&&!this._closed)this._p._tx({t:'data',to:this.peer,cid:this.cid,d:_hubEnc(d)})}
+  close(){if(this._closed)return;this._p._tx({t:'close',to:this.peer,cid:this.cid});this._gone()}
+  _gone(){if(this._closed)return;this._closed=true;this.open=false;delete this._p._conns[this.cid];this._emit('close')}
+}
+class HubPeer extends HubEmitter{
+  constructor(id){
+    super();if(typeof id!=='string')id=null;
+    this.id=id||('h_'+Math.random().toString(36).slice(2,12));
+    this._conns={};this.destroyed=false;this.disconnected=true;this.open=false;
+    if(!HUB_KEY){const k=prompt('Enter the hub key shown under the QR code on the presenter screen:');
+      if(k){HUB_KEY=k.trim().toUpperCase();try{sessionStorage.setItem('hubKey',HUB_KEY)}catch(e){}}}
+    this._dial();
+  }
+  _dial(){
+    const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/hub?id='+encodeURIComponent(this.id)+'&k='+encodeURIComponent(HUB_KEY||''));
+    this._ws=ws;let registered=false;
+    ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(x){return}if(m.t==='open')registered=true;this._rx(m)};
+    ws.onclose=ev=>{
+      if(this._ws!==ws)return;this._ws=null;this.open=false;this.disconnected=true;
+      Object.values(this._conns).forEach(c=>c._gone());      // the hub carried every link: they are all gone
+      if(this.destroyed)return;
+      if(!registered&&this._wasOpen&&ev.code!==4003&&ev.code!==4001){this._emit('disconnected',this.id);return}   // hub still down: let the app retry
+      if(!registered){
+        if(ev.code===4001)this._err('unavailable-id');
+        else if(ev.code===4003){try{sessionStorage.removeItem('hubKey')}catch(e){}HUB_KEY=null;this._err('hub-key')}
+        else this._err('network');
+      } else this._emit('disconnected',this.id);
+    };
+  }
+  _err(type){const e=new Error(type==='hub-key'?'Wrong or missing hub key — scan the QR code again.':type);e.type=type;this._emit('error',e)}
+  _tx(m){const ws=this._ws;if(ws&&ws.readyState===1)ws.send(JSON.stringify(m))}
+  _rx(m){
+    if(m.t==='open'){this._wasOpen=true;this.open=true;this.disconnected=false;this._emit('open',this.id);return}
+    if(m.t==='connect'){const c=new HubConn(this,m.from,m.cid);this._conns[m.cid]=c;this._emit('connection',c);
+      setTimeout(()=>{if(c._closed)return;c.open=true;this._tx({t:'accept',to:m.from,cid:m.cid});c._emit('open')},0);return}
+    const c=this._conns[m.cid];
+    if(m.t==='accept'){if(c&&!c._closed){c.open=true;c._emit('open')}}
+    else if(m.t==='data'){if(c&&c.open)c._emit('data',_hubDec(m.d))}
+    else if(m.t==='close'){if(c)c._gone()}
+    else if(m.t==='unavailable'){if(c){c._closed=true;delete this._conns[m.cid]}this._err('peer-unavailable')}
+    else if(m.t==='gone'){Object.values(this._conns).forEach(x=>{if(x.peer===m.id)x._gone()})}
+  }
+  connect(id){const cid=Math.random().toString(36).slice(2,12);const c=new HubConn(this,id,cid);this._conns[cid]=c;this._tx({t:'connect',to:id,cid});return c}
+  reconnect(){if(this.destroyed||this._ws)return;this._dial()}
+  destroy(){if(this.destroyed)return;this.destroyed=true;Object.values(this._conns).forEach(c=>c._gone());const ws=this._ws;this._ws=null;this.open=false;this.disconnected=true;try{ws&&ws.close()}catch(e){}}
+}
+if(window.HUB_MODE)window.Peer=HubPeer;
+
 // STATE
 let presenterPeer=null;
 let annotatorConn=null;    // single annotator connection
@@ -758,7 +871,7 @@ function goHome(){resetClientUI();
   if(presenterPeer){try{presenterPeer.destroy()}catch(e){}presenterPeer=null}
   if(clientConn){try{clientConn.close()}catch(e){}clientConn=null}
   if(clientPeer){try{clientPeer.destroy()}catch(e){}clientPeer=null}
-  pdfDoc=null;imgSlides=[];currentPage=1;totalPages=1;contentType='none';decks=[];currentDeckIndex=-1;
+  try{vidUnmount()}catch(e){}pdfDoc=null;imgSlides=[];currentPage=1;totalPages=1;contentType='none';decks=[];currentDeckIndex=-1;
   annotations={};wbStrokes=[];questions=[];unreadQ=0;myRole='';
   document.getElementById('upload-overlay').style.display='flex';
   document.getElementById('page-nav').style.display='none';
@@ -804,6 +917,7 @@ document.getElementById('guest-q-input').addEventListener('keyup',e=>{if(e.key==
 
 // PRESENTER MODE SWITCH
 function switchPresMode(mode){
+  if(mode==='wb'&&vid&&vid.playing)vidCmd('pause');
   presMode=mode;
   document.getElementById('pill-pdf').classList.toggle('on',mode==='pdf');
   document.getElementById('pill-wb').classList.toggle('on',mode==='wb');
@@ -814,7 +928,7 @@ function switchPresMode(mode){
   const msg=modeMsg(mode);
   if(annotatorConn)annotatorConn.send(msg);
   guestConns.forEach(c=>c.send(msg));
-  if(mode==='pdf'&&(pdfDoc||imgSlides.length)){
+  if(mode==='pdf'&&hasContent()){
     if(annotatorConn)sendPageToConn(annotatorConn,false);
     let i=0;guestConns.forEach(c=>{setTimeout(()=>sendLowResToGuest(c),i++*300)});
   } else if(mode==='wb'){sendWbSnapshotThrottled()}
@@ -823,7 +937,15 @@ function switchPresMode(mode){
 // QR
 function generateQR(code){
   document.getElementById('qrcode').innerHTML='';
-  const url=`${location.href.split('#')[0]}#join=${code}`;
+  let url=`${location.href.split('#')[0]}#join=${code}`;
+  if(window.HUB_MODE){
+    // offline: phones must reach this laptop by its Wi-Fi address, never "localhost"
+    let host=location.host;
+    if(/^(localhost|127\.|\[::1\])/.test(location.hostname)&&window.HUB_IPS&&HUB_IPS.length)host=HUB_IPS[0]+':'+location.port;
+    url=`http://${host}/#join=${code}&k=${HUB_KEY||''}`;
+    const h=document.getElementById('hub-hint');
+    if(h)h.innerHTML=`<b>Offline mode</b> · same Wi-Fi only<br>Type: <b>${host}</b><br>Hub key: <b style="letter-spacing:2px">${HUB_KEY||'?'}</b>`;
+  }
   new QRCode(document.getElementById('qrcode'),{text:url,width:148,height:148,colorDark:'#0B1E3D',colorLight:'#FFF',correctLevel:QRCode.CorrectLevel.M});
 }
 function showQR(){document.getElementById('qr-panel').classList.remove('hidden')}
@@ -918,10 +1040,10 @@ function renderDeckListPres(){
   if(!decks.length){el.innerHTML='<div class="deck-empty">No files loaded yet.</div>';return}
   el.innerHTML=decks.map((d,i)=>`
     <div class="deck-item${i===currentDeckIndex?' on':''}" onclick="switchDeck(${i})">
-      <div class="deck-item-icon">${d.type==='pdf'?'📄':'📊'}</div>
+      <div class="deck-item-icon">${deckIcon(d)}</div>
       <div class="deck-item-info">
         <div class="deck-item-name">${escHtml(d.name)}</div>
-        <div class="deck-item-sub">${d.totalPages} ${d.type==='pdf'?'pages':'slides'}</div>
+        <div class="deck-item-sub">${deckSub(d)}</div>
       </div>
       <button class="deck-item-del" onclick="event.stopPropagation();removeDeck(${i})" title="Remove">✕</button>
     </div>`).join('');
@@ -937,25 +1059,28 @@ function renderDeckListDraw(decklist,curIdx){
   sub.textContent=`${decklist.length} file(s) available`;
   el.innerHTML=decklist.map((d,i)=>`
     <div class="draw-deck-item${i===curIdx?' on':''}" onclick="requestDeckSwitch(${i})">
-      <div style="font-size:18px">${d.type==='pdf'?'📄':'📊'}</div>
+      <div style="font-size:18px">${deckIcon(d)}</div>
       <div>
         <div class="draw-deck-item-name">${escHtml(d.name)}</div>
-        <div class="draw-deck-item-sub">${d.totalPages} ${d.type==='pdf'?'pages':'slides'}</div>
+        <div class="draw-deck-item-sub">${deckSub(d)}</div>
       </div>
       ${i===curIdx?'<span style="font-size:11px;color:var(--lblue);margin-left:auto">▶ Current</span>':''}
     </div>`).join('');
 }
 
 function removeDeck(i){
+  const d=decks[i];if(!d)return;
+  const wasCur=i===currentDeckIndex;
   decks.splice(i,1);
-  if(!decks.length){currentDeckIndex=-1;pdfDoc=null;imgSlides=[];contentType='none';document.getElementById('upload-overlay').style.display='flex';document.getElementById('page-nav').style.display='none';}
-  else if(currentDeckIndex>=decks.length){switchDeck(decks.length-1);}
-  else{renderDeckListPres();}
+  if(d.type==='video'&&d.kind==='file'&&d.src)setTimeout(()=>{try{URL.revokeObjectURL(d.src)}catch(e){}},0);
+  if(!decks.length){vidUnmount();currentDeckIndex=-1;pdfDoc=null;imgSlides=[];contentType='none';document.getElementById('upload-overlay').style.display='flex';document.getElementById('page-nav').style.display='none';}
+  else if(wasCur){switchDeck(Math.min(i,decks.length-1));}
+  else{if(i<currentDeckIndex)currentDeckIndex--;renderDeckListPres();}
   sendDeckListToAll();
 }
 
 function sendDeckListToAll(){
-  const list=decks.map(d=>({name:d.name,type:d.type,totalPages:d.totalPages}));
+  const list=decks.map(d=>({name:d.name,type:d.type,kind:d.kind,totalPages:d.totalPages}));
   const msg={type:'deck_list',decks:list,current:currentDeckIndex};
   if(annotatorConn)annotatorConn.send(msg);
 }
@@ -964,9 +1089,10 @@ async function switchDeck(i){
   if(i<0||i>=decks.length)return;
   currentDeckIndex=i;
   const deck=decks[i];
-  annotations={};currentPage=1;
-  if(deck.type==='pdf'){pdfDoc=deck.pdfDoc;imgSlides=[];contentType='pdf';totalPages=deck.totalPages;}
-  else{pdfDoc=null;imgSlides=deck.slides;contentType='images';totalPages=deck.totalPages;}
+  annotations={};currentPage=1;currentStroke=null;
+  if(deck.type==='pdf'){vidUnmount();pdfDoc=deck.pdfDoc;imgSlides=[];contentType='pdf';totalPages=deck.totalPages;}
+  else if(deck.type==='video'){pdfDoc=null;imgSlides=[];contentType='video';totalPages=1;vidMount(deck);}
+  else{vidUnmount();pdfDoc=null;imgSlides=deck.slides;contentType='images';totalPages=deck.totalPages;}
   document.getElementById('upload-overlay').style.display='none';
   document.getElementById('page-nav').style.display=totalPages>1?'flex':'none';
   await renderPresenterPage(currentPage);
@@ -1018,8 +1144,15 @@ async function renderPresenterPage(num){
       };img.src=imgSlides[num-1];
     });
   }
+  else if(contentType==='video'){
+    const a=(vid&&vid.aspect)||16/9,h=Math.min(wrap.clientWidth/a,wrap.clientHeight)*0.97;
+    pdfCanvas.height=Math.max(1,Math.round(h));pdfCanvas.width=Math.max(1,Math.round(h*a));
+    overlayCanvas.width=pdfCanvas.width;overlayCanvas.height=pdfCanvas.height;
+    const L=vidLayer();L.style.width=pdfCanvas.width+'px';L.style.height=pdfCanvas.height+'px';
+    vidDraw();
+  }
   const label=contentType==='images'?'Slide':'Page';
-  document.getElementById('page-info').textContent=`${label} ${num}/${totalPages}`;
+  document.getElementById('page-info').textContent=contentType==='video'?'🎬 Video':`${label} ${num}/${totalPages}`;
   redrawPdfAnnotations();
 }
 
@@ -1037,7 +1170,7 @@ function strokeOnCanvas(ctx,s,W,H){
 
 async function changePage(delta){
   const next=currentPage+delta;if(next<1||next>totalPages)return;
-  currentPage=next;await renderPresenterPage(currentPage);
+  currentPage=next;currentStroke=null;clearTimeout(_guestThrottle);await renderPresenterPage(currentPage);
   if(annotatorConn)sendPageToConn(annotatorConn,false);
   let gi=0;guestConns.forEach(c=>{setTimeout(()=>sendLowResToGuest(c),gi++*250)});
 }
@@ -1061,8 +1194,12 @@ async function sendPageToConn(c,isGuest=false){
 // We chunk into 6KB pieces and reassemble on guest side
 const GCHUNK = 6000; // 6KB per chunk — safe for all platforms
 
-function sendLowResToGuest(c){
+// v18: one image transfer per guest at a time. urgent (slide change, clear, join…) cancels the one in flight;
+// non-urgent (drawing updates) waits for it and then sends the latest state, so an older, slower image
+// can never land after a newer one.
+function sendLowResToGuest(c,urgent=true){
   if(!c||c.open===false||blackOut)return;   // black screen: nothing is sent to guests
+  if(!urgent&&c._xmit){c._again=true;return}
   if(!pdfCanvas.width||!pdfCanvas.height)return;
   // Small canvas for guests: max 320px wide
   const maxW=c._hd?1280:640;
@@ -1077,17 +1214,24 @@ function sendLowResToGuest(c){
   _sendChunked(c,{type:'page_image',page:currentPage,total:totalPages,contentType},url);
 }
 
+function _cancelXmit(c){if(c&&c._xmit){c._xmit.timers.forEach(clearTimeout);c._xmit=null}if(c)c._again=false}
 function _sendChunked(c,meta,dataURL){
   if(!c||c.open===false)return;
+  _cancelXmit(c);
   const id=Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6);
   const n=Math.ceil(dataURL.length/GCHUNK);
   try{c.send({type:'img_start',id,n,page:meta.page,total:meta.total,ct:meta.contentType})}catch(e){return}
+  const x={id,timers:[]};c._xmit=x;
   for(let i=0;i<n;i++){
     const chunk=dataURL.slice(i*GCHUNK,(i+1)*GCHUNK);
-    setTimeout(()=>{
+    x.timers.push(setTimeout(()=>{
       try{if(c.open!==false)c.send({type:'img_chunk',id,i,d:chunk})}catch(e){}
-    },i*40); // 40ms between chunks = safe for mobile
+    },i*40)); // 40ms between chunks = safe for mobile
   }
+  x.timers.push(setTimeout(()=>{
+    if(c._xmit!==x)return;c._xmit=null;
+    if(c._again){c._again=false;sendLowResToGuest(c,false)}   // drawing changed while sending: send the latest
+  },n*40+20));
 }
 
 // Throttled guest broadcast — max 1 update per 600ms
@@ -1095,7 +1239,7 @@ let _guestThrottle=null;
 function scheduleGuestUpdate(){
   clearTimeout(_guestThrottle);
   _guestThrottle=setTimeout(()=>{
-    guestConns.forEach(c=>sendLowResToGuest(c));
+    guestConns.forEach(c=>sendLowResToGuest(c,false));
   },600);
 }
 
@@ -1139,6 +1283,8 @@ function sendWbSnapshotToConn(c,lowRes=false){
 
 // PRESENTER HANDLE ANNOTATOR DATA
 function handlePresenterDrawData(data){
+  if(data.type==='video_cmd'){vidCmd(String(data.cmd),data.v);return}
+  if(presMode==='pdf'&&vid&&vid.playing&&/^stroke_/.test(data.type)){currentStroke=null;return}   // draw only on a paused frame
   if(data.type==='request_mode'){switchPresMode(data.mode);return}
   if(data.type==='page_request'){changePage(data.delta);return}
   if(data.type==='deck_switch_request'){switchDeck(data.index);return}
@@ -1153,15 +1299,23 @@ function handlePresenterDrawData(data){
     return;
   }
   if(presMode==='pdf'){
-    if(!annotations[currentPage])annotations[currentPage]=[];
-    const strokes=annotations[currentPage];
-    if(data.type==='stroke_begin'){currentStroke={color:data.color,width:data.width,eraser:data.eraser,pts:[{x:data.x,y:data.y}]};strokes.push(currentStroke);drawSegOverlay(currentStroke,null,{x:data.x,y:data.y})}
-    else if(data.type==='stroke_point'&&currentStroke){{const _last=currentStroke.pts[currentStroke.pts.length-1],_p={x:data.x,y:data.y};currentStroke.pts.push(_p);drawSegOverlay(currentStroke,_last,_p)}}
-    else if(data.type==='stroke_end'){currentStroke=null}
-    else if(data.type==='clear_page'){annotations[data.page]=[];if(data.page===currentPage)redrawPdfAnnotations()}
-    else if(data.type==='undo'){if(strokes.length){strokes.pop();redrawPdfAnnotations()}}
-    // after redraw send snapshot to guests
-    if(['stroke_end','clear_page','undo'].includes(data.type)){scheduleGuestUpdate()}
+    // v18: every stroke / clear / undo carries the slide the annotator is looking at. Older annotator pages
+    // send no page (or always 1 for clear) — then the presenter's current slide is used.
+    const pg=(data.page>=1&&data.page<=totalPages)?data.page:currentPage;
+    if(!annotations[pg])annotations[pg]=[];
+    const strokes=annotations[pg];
+    if(data.type==='stroke_begin'){currentStroke={color:data.color,width:data.width,eraser:data.eraser,pts:[{x:data.x,y:data.y}],_pg:pg};strokes.push(currentStroke);if(pg===currentPage)drawSegOverlay(currentStroke,null,{x:data.x,y:data.y})}
+    else if(data.type==='stroke_point'&&currentStroke){{const _last=currentStroke.pts[currentStroke.pts.length-1],_p={x:data.x,y:data.y};currentStroke.pts.push(_p);if(currentStroke._pg===currentPage)drawSegOverlay(currentStroke,_last,_p)}}
+    else if(data.type==='stroke_end'){currentStroke=null;scheduleGuestUpdate()}
+    else if(data.type==='clear_page'||data.type==='undo'){
+      if(data.type==='clear_page'){annotations[pg]=[];if(currentStroke&&currentStroke._pg===pg)currentStroke=null}
+      else if(strokes.length){const s=strokes.pop();if(s===currentStroke)currentStroke=null}
+      if(pg===currentPage){
+        redrawPdfAnnotations();
+        if(annotatorConn)sendPageToConn(annotatorConn,false);        // annotator's slide image had the old ink baked in
+        clearTimeout(_guestThrottle);guestConns.forEach(c=>sendLowResToGuest(c,true));   // guests: now, replacing any image in flight
+      }
+    }
   } else {
     const wc=document.getElementById('wb-canvas-pres');const ctx=wc.getContext('2d');
     if(data.type==='stroke_begin'){currentStroke={color:data.color,width:data.width,eraser:data.eraser,pts:[{x:data.x,y:data.y}]};wbStrokes.push(currentStroke)}
@@ -1187,7 +1341,7 @@ function drawSegOverlay(st,a,b){
 }
 
 function clearPresenter(){
-  if(presMode==='pdf'){annotations={};redrawPdfAnnotations();if(annotatorConn)annotatorConn.send({type:'clear_all'});guestConns.forEach(c=>sendPageToConn(c,true))}
+  if(presMode==='pdf'){annotations={};currentStroke=null;redrawPdfAnnotations();clearTimeout(_guestThrottle);if(annotatorConn){annotatorConn.send({type:'clear_all'});sendPageToConn(annotatorConn,false)}guestConns.forEach(c=>sendPageToConn(c,true))}
   else{wbStrokes=[];redrawWbPres();if(annotatorConn)annotatorConn.send({type:'wb_clear'});guestConns.forEach(c=>c.send({type:'wb_clear'}))}
   toast('🗑 Cleared');
 }
@@ -1236,6 +1390,7 @@ const wbCanvasDraw=document.getElementById('wb-canvas-draw');
 
 function handleDrawerData(data){
   if(data.type==='blackout'){applyAnnBlackout(data.on);return}
+  if(data.type==='video_state'){applyAnnVideo(data);return}
   if(data.type==='xfer_ack'||data.type==='xfer_done'){handleXferReply(data);return}
   if(data.type==='mode_set'&&typeof data.blackout!=='undefined')applyAnnBlackout(data.blackout);
   if(data.type==='mode_set'){
@@ -1244,12 +1399,12 @@ function handleDrawerData(data){
     const nav=document.getElementById('slide-nav');const badge=document.getElementById('draw-mode-badge');
     const mb_pdf=document.getElementById('mb-pdf');const mb_wb=document.getElementById('mb-wb');
     if(data.mode==='wb'){pdw.style.display='none';wbw.classList.add('on');nav.style.display='none';badge.className='badge badge-wb';badge.textContent='Whiteboard';mb_pdf.className='mode-bar-btn';mb_wb.className='mode-bar-btn on-wb';if(data.aspect)wbAspect=data.aspect;initWbDrawCanvas()}
-    else{pdw.style.display='flex';wbw.classList.remove('on');nav.style.display='flex';badge.className='badge badge-green';badge.textContent='PDF/PPT';mb_pdf.className='mode-bar-btn on';mb_wb.className='mode-bar-btn';relayoutDrawer()}
+    else{pdw.style.display='flex';wbw.classList.remove('on');nav.style.display=annVid.active?'none':'flex';_annVidWasOn=!annVid.active;applyAnnVideo(annVid);badge.className='badge badge-green';badge.textContent='PDF/PPT';mb_pdf.className='mode-bar-btn on';mb_wb.className='mode-bar-btn';relayoutDrawer()}
   }
   else if(data.type==='page_image'){
     document.getElementById('draw-waiting').classList.add('hidden');
     pageBg.onload=()=>{setupDrawCanvasForImage();requestAnimationFrame(()=>requestAnimationFrame(resizeDrawCanvas))};
-    pageBg.src=data.dataURL;
+    pageBg.src=data.dataURL;annPage=data.page||1;
     document.getElementById('draw-pg-num').textContent=data.page;
     document.getElementById('draw-pg-total').textContent='/ '+(data.contentType==='images'?data.total+' slides':data.total+' pages');
     clearDrawCanvas();
@@ -1280,16 +1435,17 @@ function rebuildQAList(){
 
 
 // DRAWING
-let drawing=false,lastPt=null;
+let drawing=false,lastPt=null,annPage=1;   // annPage: slide shown on the annotator (v18)
 function getActiveCanvas(){return drawerMode==='wb'?wbCanvasDraw:drawCanvas}
 function getPt(e,canvas){
   const rect=canvas.getBoundingClientRect();const src=e.touches?e.touches[0]:e;
   return{x:(src.clientX-rect.left)/rect.width,y:(src.clientY-rect.top)/rect.height};
 }
 function startDraw(e){
-  e.preventDefault();const canvas=getActiveCanvas();canvas.setPointerCapture(e.pointerId);drawing=true;
+  e.preventDefault();
+  if(drawerMode!=='wb'&&annVid.active&&annVid.playing){toast('⏸ Pause the video to draw');return}const canvas=getActiveCanvas();canvas.setPointerCapture(e.pointerId);drawing=true;
   const pt=getPt(e,canvas);lastPt=pt;
-  if(clientConn)clientConn.send({type:'stroke_begin',x:pt.x,y:pt.y,color:drawColor,width:penW(),eraser:isEraser});
+  if(clientConn)clientConn.send({type:'stroke_begin',x:pt.x,y:pt.y,color:drawColor,width:penW(),eraser:isEraser,page:annPage});
   const ctx=canvas.getContext('2d');ctx.save();ctx.globalCompositeOperation=isEraser?'destination-out':'source-over';
   ctx.fillStyle=isEraser?'rgba(0,0,0,1)':drawColor;ctx.beginPath();ctx.arc(pt.x*canvas.width,pt.y*canvas.height,penW()*Math.min(canvas.width,canvas.height)/200,0,Math.PI*2);ctx.fill();ctx.restore();
 }
@@ -1317,12 +1473,12 @@ function penW(){return isEraser?drawWidth*4:drawWidth}
 function toggleEraser(){isEraser=!isEraser;document.getElementById('eraser-btn').classList.toggle('on',isEraser)}
 function clearCurrentPage(){
   if(drawerMode==='wb'){const ctx=wbCanvasDraw.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wbCanvasDraw.width,wbCanvasDraw.height);if(clientConn)clientConn.send({type:'wb_clear'})}
-  else{clearDrawCanvas();if(clientConn)clientConn.send({type:'clear_page',page:currentPage})}
+  else{clearDrawCanvas();if(clientConn)clientConn.send({type:'clear_page',page:annPage})}
   toast('🗑 Cleared');
 }
 function clearDrawCanvas(){const ctx=drawCanvas.getContext('2d');ctx.clearRect(0,0,drawCanvas.width,drawCanvas.height)}
 function clearWbDrawCanvas(){const ctx=wbCanvasDraw.getContext('2d');ctx.clearRect(0,0,wbCanvasDraw.width,wbCanvasDraw.height)}
-function undoStroke(){if(clientConn)clientConn.send({type:'undo'});toast('↩ Undo')}
+function undoStroke(){if(clientConn)clientConn.send({type:'undo',page:annPage});toast('↩ Undo')}
 function requestPage(delta){if(clientConn)clientConn.send({type:'page_request',delta})}
 function drawerRequestMode(mode){if(clientConn)clientConn.send({type:'request_mode',mode});toast(mode==='wb'?'🟩 Switching to Whiteboard…':'📄 Switching to PDF/PPT…')}
 function goFullscreen(){
@@ -1334,7 +1490,7 @@ function goFullscreen(){
 // RESIZE
 window.addEventListener('resize',()=>{
   if(document.getElementById('presenter').classList.contains('active')){
-    if(presMode==='pdf'&&(pdfDoc||imgSlides.length))renderPresenterPage(currentPage);
+    if(presMode==='pdf'&&hasContent())renderPresenterPage(currentPage);
     else if(presMode==='wb'){initWbPresCanvas();sendWbSnapshotThrottled()}
   }
   if(document.getElementById('drawer').classList.contains('active')){
@@ -1379,6 +1535,7 @@ function teardownClient(){
 function startDrawer(code,password){joinRoom('annotator',code,password||'')}
 function startGuest(code){joinRoom('guest',code,'')}
 function joinRoom(role,code,password){
+  if(role==='annotator'){try{_annVidWasOn=true;applyAnnVideo({active:false})}catch(e){}}
   joinToken++;lastJoin={role,code,password};myRole=role;myGuestNum=0;guestHasImage=false;_gBuf={};requestWake();
   showScreen(role==='guest'?'guest':'drawer');
   _el('jd-log').innerHTML='';jdShow('Joining room '+code+'…');
@@ -1411,6 +1568,7 @@ function handleGuestData(d){
   if(d.type==='blackout'){applyGuestBlackout(d.on);return}
   if(d.type==='wb_snapshot')window._gLastWb=d.dataURL;
   if(d.type==='img_start'){
+    _gBuf={};   // v18: the link is ordered, so the newest img_start wins; chunks of older transfers are dropped
     _gBuf[d.id]={n:d.n,page:d.page,total:d.total,chunks:new Array(d.n),got:0};
     _el('guest-wait-txt').textContent='Receiving slide…';
     _el('guest-pg-info').textContent='Slide '+d.page+'/'+d.total;
@@ -1432,8 +1590,9 @@ function handleGuestData(d){
   else if(d.type==='no_content'){_el('guest-wait-txt').textContent='Connected ✓ — the presenter has not opened a file yet.';clearTimeout(window._gRetry)}
   else if(d.type==='page_image'){_displayGuestImage(d.dataURL,d.page,d.total)}
   else if(d.type==='wb_snapshot'){
-    const img=new Image();
+    const img=new Image(),tok=++_gPaint;
     img.onload=()=>{
+      if(tok!==_gPaint||_el('guest').classList.contains('blackout'))return;
       const wc=_el('guest-wb-canvas'),wrap=_el('guest-wb-wrap');
       const wW=wrap.clientWidth||window.innerWidth,wH=wrap.clientHeight||(window.innerHeight-120);
       const sc=Math.min(wW/img.width,wH/img.height)*0.99;
@@ -1443,16 +1602,18 @@ function handleGuestData(d){
     };
     img.src=d.dataURL;
   }
-  else if(d.type==='wb_clear'){const wc=_el('guest-wb-canvas');const ctx=wc.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wc.width,wc.height)}
+  else if(d.type==='wb_clear'){++_gPaint;const wc=_el('guest-wb-canvas');const ctx=wc.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wc.width,wc.height)}
   else if(d.type==='guest_announce'){
     const banner=_el('guest-announce');_el('guest-announce-text').textContent=d.text;banner.classList.add('show');
     clearTimeout(window._gaBannerTimer);window._gaBannerTimer=setTimeout(()=>banner.classList.remove('show'),12000);
   }
 }
+let _gPaint=0;
 function _displayGuestImage(url,page,total){
   window._gLast={url,page,total};
-  const img=new Image();
+  const img=new Image(),tok=++_gPaint;
   img.onload=()=>{
+    if(tok!==_gPaint||_el('guest').classList.contains('blackout'))return;   // a newer image (or black screen) came first
     const wrap=_el('guest-view-wrap'),gc=_el('guest-canvas');
     const wW=wrap.clientWidth||window.innerWidth,wH=wrap.clientHeight||(window.innerHeight-120);
     const sc=Math.min(wW/img.width,wH/img.height)*0.99;
@@ -1850,9 +2011,10 @@ function startPresenter(mode){
           }
           if(annotatorConn&&annotatorConn!==c){const old=annotatorConn;annotatorConn=null;old._kicked=true;try{old.close()}catch(e){}}   // a reconnect replaces the stale link
           annotatorConn=c;updatePresenterBadge();toast('📱 Annotator joined!');
-          c.send(modeMsg(presMode));if(presMode==='pdf'&&!(pdfDoc||imgSlides.length))c.send({type:'no_content'});
-          if(presMode==='pdf'&&(pdfDoc||imgSlides.length))sendPageToConn(c);
+          c.send(modeMsg(presMode));if(presMode==='pdf'&&!hasContent())c.send({type:'no_content'});
+          if(presMode==='pdf'&&hasContent())sendPageToConn(c);
           else if(presMode==='wb'){initWbPresCanvas();sendWbSnapshot()}
+          c.send(vidStateMsg());
           // send existing questions to annotator
           if(questions.length)c.send({type:'all_questions',questions});
           c.on('close',()=>{if(annotatorConn===c){annotatorConn=null;xfers={};updatePresenterBadge();if(!c._kicked)toast('Annotator left')}});
@@ -1861,9 +2023,9 @@ function startPresenter(mode){
           const want=parseInt(d.guestNum,10);let gNum;
           if(want>0&&![...guestConns.values()].some(x=>x._gnum===want))gNum=want;else gNum=++guestCounter;
           guestCounter=Math.max(guestCounter,gNum);c._gnum=gNum;guestConns.set(c.peer,c);
-          c.send(modeMsg(presMode,{guestNum:gNum}));if(presMode==='pdf'&&!(pdfDoc||imgSlides.length))c.send({type:'no_content'});
+          c.send(modeMsg(presMode,{guestNum:gNum}));if(presMode==='pdf'&&!hasContent())c.send({type:'no_content'});
           // Small delay so connection is stable before pushing image data
-          if(presMode==='pdf'&&(pdfDoc||imgSlides.length))setTimeout(()=>sendLowResToGuest(c),1500);
+          if(presMode==='pdf'&&hasContent())setTimeout(()=>sendLowResToGuest(c),1500);
           else if(presMode==='wb')setTimeout(()=>sendWbSnapshotToConn(c,true),1500);
           updatePresenterBadge();toast(`👁 Guest #${gNum} joined`);
           c.on('close',()=>{guestConns.delete(c.peer);updatePresenterBadge();if(!c._kicked)toast(`Guest #${gNum} left`)});
@@ -1886,6 +2048,10 @@ function startPresenter(mode){
   });
 }
 
+// v20 (5 Oct 2026): video decks (file / YouTube) — see VIDEO section.
+// v19 (4 Oct 2026): offline mode — see HubPeer above and hub.js in the offline kit.
+// v18 (4 Oct 2026): clear/undo use the annotator's slide; strokes stay on the slide they were drawn on;
+// one guest image transfer at a time (no older image painting over a newer one). See handoff §9.
 // ═══════════════ v17: ANNOTATOR FILES, GUEST FULL SCREEN, KEYBOARD, BLACK SCREEN ═══════════════
 const _sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const MAX_XFER=30*1024*1024;
@@ -2018,7 +2184,7 @@ function setBlackout(on){
   _el('presenter').classList.toggle('is-black',blackOut);
   document.body.classList.toggle('presenter-black',blackOut);
   const b=_el('black-btn');if(b)b.classList.toggle('on',blackOut);
-  if(blackOut)wakeBlackBtn();else{wakeNav();setTimeout(resumeGuests,150)}
+  if(blackOut){if(vid&&vid.playing)vidCmd('pause');wakeBlackBtn();clearTimeout(_guestThrottle);guestConns.forEach(_cancelXmit)}else{wakeNav();setTimeout(resumeGuests,150)}
   const msg={type:'blackout',on:blackOut};
   if(annotatorConn){try{annotatorConn.send(msg)}catch(e){}}
   guestConns.forEach(c=>{try{c.send(msg)}catch(e){}});
@@ -2026,7 +2192,7 @@ function setBlackout(on){
 function resumeGuests(){
   if(blackOut)return;
   if(presMode==='wb'){guestConns.forEach(c=>sendWbSnapshotToConn(c,true))}
-  else if(pdfDoc||imgSlides.length){let i=0;guestConns.forEach(c=>setTimeout(()=>sendLowResToGuest(c),i++*60))}
+  else if(hasContent()){let i=0;guestConns.forEach(c=>setTimeout(()=>sendLowResToGuest(c),i++*60))}
 }
 function requestBlackout(on){if(clientConn&&clientConn.open!==false)clientConn.send({type:'blackout_request',on:!!on});else toast('Not connected')}
 function applyAnnBlackout(on){
@@ -2038,7 +2204,7 @@ function applyGuestBlackout(on){
   _el('guest').classList.toggle('blackout',!!on);
   if(on){
     ['guest-canvas','guest-wb-canvas'].forEach(id=>{const c=_el(id);c.getContext('2d').clearRect(0,0,c.width,c.height)});
-    window._gLast=null;window._gLastWb=null;guestHasImage=false;_gBuf={};
+    window._gLast=null;window._gLastWb=null;guestHasImage=false;_gBuf={};_gPaint++;
   }else if(!guestHasImage){const w=_el('guest-waiting');if(w)w.classList.remove('hidden');const t=_el('guest-wait-txt');if(t)t.textContent='Resuming…'}
 }
 
@@ -2071,6 +2237,19 @@ document.addEventListener('keydown',e=>{
   const k=e.key,noBtn=(tg===document.body||tg===document.documentElement||!tag);   // Space/Enter only when no button has focus
   const nextK=k==='ArrowRight'||k==='ArrowDown'||k==='PageDown'||((k===' '||k==='Enter')&&noBtn);
   const prevK=k==='ArrowLeft'||k==='ArrowUp'||k==='PageUp'||k==='Backspace';
+  if(onPres&&vid&&presMode==='pdf'&&tag!=='VIDEO'){
+    if((k===' '||k==='Enter')&&noBtn||k==='k'||k==='K'||k==='PageDown'){e.preventDefault();vidCmd('toggle');return}
+    if(k==='ArrowRight'){e.preventDefault();vidCmd('skip',5);return}
+    if(k==='ArrowLeft'){e.preventDefault();vidCmd('skip',-5);return}
+    if(k==='PageUp'){e.preventDefault();vidCmd('skip',-10);return}
+    if(k==='m'||k==='M'){e.preventDefault();vidCmd('mute',!vid.muted);return}
+  }
+  if(onDraw&&annVid.active&&drawerMode!=='wb'){
+    if((k===' '&&noBtn)||k==='k'||k==='K'||k==='PageDown'){e.preventDefault();annVidCmd('toggle');return}
+    if(k==='ArrowRight'){e.preventDefault();annVidCmd('skip',5);return}
+    if(k==='ArrowLeft'){e.preventDefault();annVidCmd('skip',-5);return}
+    if(k==='PageUp'){e.preventDefault();annVidCmd('skip',-10);return}
+  }
   if(onPres){
     if(nextK){e.preventDefault();if(presMode==='pdf')changePage(1);return}
     if(prevK){e.preventDefault();if(presMode==='pdf')changePage(-1);return}
@@ -2231,6 +2410,191 @@ function togglePwVis(id){
 }
 
 function showPwError(msg){toast('🔒 '+msg,3500)}
+
+
+// ═══════════════ v20: VIDEO — plays on the projector only; annotator = remote + draws on a paused frame ═══════════════
+// A video is a deck (type 'video', 1 page). pdfCanvas holds a snapshot (paused frame of a local file, or a title
+// card), so the existing image pipeline feeds the annotator and guests. Guests never receive the video itself.
+let vid=null;                                  // presenter: mounted video
+let annVid={active:false,playing:false};       // annotator: last video_state from the presenter
+let _vidStateT=0,_vidTick=null,_ytP=null,annVidSeeking=false,_annVolT=null,_annVidWasOn=false;
+const vidLayer=()=>_el('vid-layer');
+function hasContent(){return !!(pdfDoc||imgSlides.length||contentType==='video')}
+function fmtT(s){s=Math.max(0,Math.floor(+s||0));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=String(s%60).padStart(2,'0');return h?`${h}:${String(m).padStart(2,'0')}:${x}`:`${m}:${x}`}
+function deckIcon(d){return d.type==='pdf'?'📄':d.type==='video'?'🎬':'📊'}
+function deckSub(d){
+  if(d.type==='video')return d.kind==='yt'?'YouTube · needs internet':d.kind==='url'?'Web video · needs internet':'Video file';
+  return d.totalPages+' '+(d.type==='pdf'?'pages':'slides');
+}
+function ytIdFrom(u){
+  try{
+    const url=new URL(String(u).trim());const h=url.hostname.replace(/^(www|m|music)\./,'');let id=null;
+    if(h==='youtu.be')id=url.pathname.slice(1).split('/')[0];
+    else if(/^youtube(-nocookie)?\.com$/.test(h)){
+      if(url.pathname==='/watch')id=url.searchParams.get('v');
+      else{const m=url.pathname.match(/^\/(embed|shorts|live|v)\/([^/?#]+)/);if(m)id=m[2]}
+    }
+    if(!id||!/^[A-Za-z0-9_-]{6,20}$/.test(id))return null;
+    const t=url.searchParams.get('t')||url.searchParams.get('start')||'';let start=0;
+    const mm=String(t).match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/);if(mm)start=(+mm[1]||0)*3600+(+mm[2]||0)*60+(+mm[3]||0);
+    return{id,start};
+  }catch(e){return null}
+}
+function addVideoFile(input){
+  const files=Array.from(input.files||[]);input.value='';let n=0;
+  files.forEach(f=>{
+    if(!/^video\//.test(f.type)&&!/\.(mp4|m4v|webm|mov|ogv)$/i.test(f.name)){toast('⚠️ Not a video: '+f.name,4000);return}
+    decks.push({name:f.name,type:'video',kind:'file',src:URL.createObjectURL(f),totalPages:1,lastTime:0});n++;
+  });
+  if(n)switchDeck(decks.length-1);
+}
+function addVideoLink(){
+  const u=prompt('Paste a YouTube link (or a direct link to an .mp4 / .webm file).\nLinks need internet while the video plays.');
+  if(!u||!u.trim())return;
+  const yt=ytIdFrom(u);
+  if(yt)decks.push({name:'YouTube video',type:'video',kind:'yt',ytId:yt.id,totalPages:1,lastTime:yt.start});
+  else if(/^https?:\/\/\S+$/i.test(u.trim()))decks.push({name:decodeURIComponent(u.trim().split('?')[0].split('/').pop()||'Web video'),type:'video',kind:'url',src:u.trim(),totalPages:1,lastTime:0});
+  else{toast('⚠️ That is not a link',3000);return}
+  switchDeck(decks.length-1);
+}
+function loadYT(){
+  if(window.YT&&YT.Player)return Promise.resolve();
+  if(_ytP)return _ytP;
+  _ytP=new Promise((res,rej)=>{
+    const prev=window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady=()=>{try{prev&&prev()}catch(e){}res()};
+    const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';
+    s.onerror=()=>{_ytP=null;s.remove();rej(new Error('offline'))};document.head.appendChild(s);
+    setTimeout(()=>{if(!(window.YT&&YT.Player)){_ytP=null;rej(new Error('timeout'))}},15000);
+  });
+  return _ytP;
+}
+function vidMount(deck){
+  vidUnmount();
+  const L=vidLayer();L.innerHTML='';L.style.display='block';
+  const v=vid={deck,kind:deck.kind,playing:false,t:deck.lastTime||0,dur:0,vol:100,muted:false,ready:false,aspect:16/9};
+  if(deck.kind==='yt'){
+    const box=document.createElement('div');box.id='yt-box';L.appendChild(box);
+    loadYT().then(()=>{
+      if(vid!==v)return;
+      v.yt=new YT.Player('yt-box',{videoId:deck.ytId,width:'100%',height:'100%',
+        playerVars:{playsinline:1,rel:0,start:Math.floor(v.t)||0,origin:location.origin},
+        events:{
+          onReady:()=>{if(vid!==v)return;v.ready=true;try{if(deck.vol!=null){v.yt.setVolume(deck.vol);deck.muted?v.yt.mute():v.yt.unMute()}v.dur=v.yt.getDuration()||0;v.vol=v.yt.getVolume();v.muted=v.yt.isMuted();
+            const d=v.yt.getVideoData();if(d&&d.title){deck.name=d.title;renderDeckListPres();sendDeckListToAll()}}catch(e){}
+            vidSnapshot();sendVidState()},
+          onStateChange:e=>{if(vid!==v)return;if(e.data===1)vidPlaying(true);else if(e.data===2||e.data===0)vidPlaying(false)},
+          onError:e=>{if(vid===v)toast('⚠️ YouTube will not play this video here (error '+e.data+'). The owner may block embedding.',7000)}
+        }});
+    }).catch(()=>{if(vid===v){toast('⚠️ YouTube needs internet — it cannot play offline.',6000);vidSnapshot('YouTube needs internet')}});
+  }else{
+    const el=document.createElement('video');el.src=deck.src;el.controls=true;el.playsInline=true;el.preload='auto';
+    v.el=el;L.appendChild(el);
+    if(deck.vol!=null){el.volume=deck.vol/100;el.muted=!!deck.muted;v.vol=deck.vol;v.muted=!!deck.muted}
+    el.addEventListener('loadedmetadata',()=>{if(vid!==v)return;v.ready=true;v.dur=el.duration||0;
+      if(el.videoWidth&&el.videoHeight)v.aspect=el.videoWidth/el.videoHeight;
+      if(v.t){try{el.currentTime=v.t}catch(e){}}
+      renderPresenterPage(currentPage).then(()=>vidSnapshot());sendVidState()});
+    el.addEventListener('loadeddata',()=>{if(vid===v&&!v.playing)vidSnapshot()});
+    el.addEventListener('play',()=>{if(vid===v)vidPlaying(true)});
+    el.addEventListener('pause',()=>{if(vid===v)vidPlaying(false)});
+    el.addEventListener('ended',()=>{if(vid===v)vidPlaying(false)});
+    el.addEventListener('seeked',()=>{if(vid!==v)return;v.t=el.currentTime;if(!v.playing){vidInkReset();vidSnapshot()}sendVidState()});
+    el.addEventListener('volumechange',()=>{if(vid!==v)return;v.vol=Math.round(el.volume*100);v.muted=el.muted;sendVidState()});
+    el.addEventListener('timeupdate',()=>{if(vid!==v)return;v.t=el.currentTime;if(Date.now()-_vidStateT>1000)sendVidState()});
+    el.addEventListener('error',()=>{if(vid===v){toast('⚠️ This browser cannot play this video. Use MP4 (H.264) or WebM.',7000);vidSnapshot('This video format cannot play here')}});
+  }
+  clearInterval(_vidTick);
+  _vidTick=setInterval(()=>{if(vid&&vid.kind==='yt'&&vid.ready&&vid.yt){try{vid.t=vid.yt.getCurrentTime()||0;vid.dur=vid.yt.getDuration()||vid.dur;vid.vol=vid.yt.getVolume();vid.muted=vid.yt.isMuted()}catch(e){}sendVidState()}},1000);
+  sendVidState();
+}
+function vidUnmount(){
+  clearInterval(_vidTick);
+  const v=vid;if(!v)return;vid=null;
+  try{v.deck.lastTime=v.kind==='yt'?(v.yt&&v.yt.getCurrentTime?v.yt.getCurrentTime():v.t):v.el.currentTime}catch(e){}
+  v.deck.vol=v.vol;v.deck.muted=v.muted;
+  try{if(v.el){v.el.pause();v.el.removeAttribute('src');v.el.load()}}catch(e){}
+  try{if(v.yt&&v.yt.destroy)v.yt.destroy()}catch(e){}
+  const L=vidLayer();if(L){L.innerHTML='';L.style.display='none'}
+  sendVidState();
+}
+function vidInkReset(){
+  const had=Object.values(annotations).some(a=>a&&a.length);
+  annotations={};currentStroke=null;redrawPdfAnnotations();
+  if(had&&annotatorConn){try{annotatorConn.send({type:'clear_all'})}catch(e){}}
+}
+function vidPlaying(p){
+  const v=vid;if(!v)return;
+  if(v.playing!==p){v.playing=p;if(p)vidInkReset();vidSnapshot()}   // ink belongs to one paused frame
+  sendVidState();
+}
+function vidDraw(note){
+  const v=vid;if(!v||!pdfCanvas.width)return;
+  const ctx=pdfCanvas.getContext('2d'),W=pdfCanvas.width,H=pdfCanvas.height;
+  // only a local file is same-origin; drawing a web video would lock the canvas (tainted) and break image sending
+  if(v.kind==='file'&&v.el&&!v.playing&&v.el.readyState>=2&&v.el.videoWidth){try{ctx.drawImage(v.el,0,0,W,H);return}catch(e){}}
+  ctx.fillStyle='#0B1E3D';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';const s=Math.min(W,H);
+  ctx.font=`${Math.round(s*.16)}px sans-serif`;ctx.fillText(v.playing?'▶':'⏸',W/2,H*.34);
+  ctx.font=`bold ${Math.round(s*.06)}px sans-serif`;ctx.fillText(note||(v.playing?'Video playing on the main screen':'Video paused'),W/2,H*.56,W*.9);
+  ctx.font=`${Math.round(s*.045)}px sans-serif`;ctx.fillStyle='#9fb3d1';ctx.fillText(String(v.deck.name).slice(0,70),W/2,H*.67,W*.9);
+  if(!v.playing&&!note)ctx.fillText('Annotator: draw here — the ink shows on top of the video',W/2,H*.78,W*.9);
+}
+function vidSnapshot(note){
+  if(!vid||!pdfCanvas.width)return;
+  vidDraw(note);
+  if(annotatorConn)sendPageToConn(annotatorConn,false);
+  clearTimeout(_guestThrottle);guestConns.forEach(c=>sendLowResToGuest(c,true));
+}
+function vidStateMsg(){
+  const v=vid;if(!v)return{type:'video_state',active:false};
+  return{type:'video_state',active:true,kind:v.kind,title:String(v.deck.name),playing:v.playing,t:v.t||0,dur:isFinite(v.dur)?v.dur:0,vol:v.vol,muted:v.muted,ready:v.ready};
+}
+function sendVidState(){_vidStateT=Date.now();if(annotatorConn){try{annotatorConn.send(vidStateMsg())}catch(e){}}}
+function vidCmd(cmd,val){
+  const v=vid;if(!v)return;
+  const yt=v.kind==='yt'?v.yt:null,el=v.el;
+  if(v.kind==='yt'&&!(yt&&v.ready))return;
+  let cur=0,dur=0;try{cur=yt?yt.getCurrentTime():el.currentTime;dur=yt?yt.getDuration():el.duration}catch(e){}
+  const seek=t=>{t=Math.max(0,+t||0);if(isFinite(dur)&&dur>0)t=Math.min(t,Math.max(0,dur-0.25));
+    if(yt){yt.seekTo(t,true);if(!v.playing){vidInkReset();v.t=t;setTimeout(()=>vid===v&&vidSnapshot(),200)}}else el.currentTime=t;v.t=t};
+  switch(cmd){
+    case 'play':
+      if(yt)yt.playVideo();
+      else{const p=el.play();if(p&&p.catch)p.catch(()=>{toast('▶ Press play on the laptop once — the browser blocked autoplay',6000);
+        if(annotatorConn){try{annotatorConn.send({type:'presenter_notify',text:'The laptop browser blocked autoplay. Ask the presenter to press ▶ on the laptop once.',time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})})}catch(e){}}})}
+      break;
+    case 'pause':if(yt)yt.pauseVideo();else el.pause();break;
+    case 'toggle':vidCmd(v.playing?'pause':'play');return;
+    case 'seek':seek(val);break;
+    case 'skip':seek(cur+(+val||0));break;
+    case 'volume':{const n=Math.max(0,Math.min(100,Math.round(+val||0)));if(yt){yt.setVolume(n);if(n>0)yt.unMute()}else{el.volume=n/100;if(n>0)el.muted=false}v.vol=n;break}
+    case 'mute':if(yt){val?yt.mute():yt.unMute()}else el.muted=!!val;v.muted=!!val;break;
+    default:return;
+  }
+  if(yt)setTimeout(()=>{if(vid===v){try{v.t=yt.getCurrentTime();v.vol=yt.getVolume();v.muted=yt.isMuted()}catch(e){}sendVidState()}},300);
+}
+
+// ── annotator: video remote ──
+function applyAnnVideo(d){
+  annVid=d&&d.active?d:{active:false,playing:false};
+  const box=_el('vid-ctl');if(!box)return;
+  const on=!!annVid.active&&drawerMode!=='wb';
+  box.classList.toggle('on',on);
+  _el('drawer').classList.toggle('vid-playing',on&&!!annVid.playing);
+  if(drawerMode!=='wb')_el('slide-nav').style.display=on?'none':'flex';
+  if(on!==_annVidWasOn){_annVidWasOn=on;relayoutDrawer()}
+  if(!on)return;
+  _el('vid-play').textContent=annVid.playing?'⏸':'▶';
+  _el('vid-time').textContent=fmtT(annVid.t)+' / '+fmtT(annVid.dur);
+  if(!annVidSeeking&&annVid.dur>0)_el('vid-seek').value=Math.round(1000*annVid.t/annVid.dur);
+  _el('vid-mute').textContent=(annVid.muted||annVid.vol===0)?'🔇':'🔊';
+  if(document.activeElement!==_el('vid-vol'))_el('vid-vol').value=annVid.vol==null?100:annVid.vol;
+  _el('vid-hint').textContent=(annVid.playing?'▶ Playing on the main screen — pause to draw':'⏸ Paused — you can draw on this frame')+(annVid.title?' · '+annVid.title:'');
+}
+function annVidCmd(cmd,v){if(clientConn&&clientConn.open!==false){try{clientConn.send({type:'video_cmd',cmd,v})}catch(e){}}}
+function annVidSeekTo(val){annVidSeeking=false;if(annVid.dur>0)annVidCmd('seek',(+val/1000)*annVid.dur)}
+function annVidVol(val){clearTimeout(_annVolT);_annVolT=setTimeout(()=>annVidCmd('volume',+val),120)}
 
 // AUTO-JOIN
 window.addEventListener('load',()=>{
