@@ -152,6 +152,29 @@
     .tb-sep{width:1px;height:24px;background:var(--border);flex-shrink:0}
     .zoom-lbl{font-size:12px;color:var(--lblue);min-width:26px;text-align:center;font-weight:600}
 
+    /* people panel + reconnect banner */
+    .ppl-row{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid rgba(42,63,107,.5);font-size:13px}
+    .ppl-foot{padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+    .ppl-foot .tool-btn{width:100%;padding:8px}
+    .ppl-danger{background:rgba(239,68,68,.15) !important;border-color:rgba(239,68,68,.45) !important;color:#f87171 !important}
+    .ppl-lock{font-size:12px;color:var(--gray);display:flex;align-items:center;gap:8px;cursor:pointer}
+    #reconnect-banner{position:fixed;top:8px;left:50%;transform:translateX(-50%);background:rgba(234,179,8,.96);color:#111;font-size:12px;font-weight:700;padding:6px 14px;border-radius:20px;z-index:120;display:none;white-space:nowrap}
+    #reconnect-banner.show{display:block}
+
+    /* network test overlay */
+    .nettest{position:fixed;inset:0;background:rgba(8,16,34,.98);z-index:190;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto}
+    .nettest.hidden{display:none}
+    .nt-box{width:100%;max-width:440px;display:flex;flex-direction:column;gap:10px;margin:auto 0}
+    .nt-title{font-size:17px;font-weight:700}
+    .nt-sub{font-size:12px;color:var(--gray);line-height:1.55}
+    .nt-adv{font-size:12px;color:var(--gray)}
+    .nt-adv summary{cursor:pointer;padding:4px 0}
+    .nt-adv input{display:block;width:100%;margin-top:6px;background:var(--card);border:1px solid var(--border);color:var(--white);padding:9px 10px;border-radius:8px;font-size:13px;outline:none;-webkit-user-select:text;user-select:text}
+    .nt-out{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.7;color:var(--gray);min-height:120px;font-family:ui-monospace,Menlo,Consolas,monospace;-webkit-user-select:text;user-select:text}
+    .nt-out .ok{color:#4ade80}.nt-out .bad{color:#f87171}.nt-out .warn{color:#fbbf24}
+    .nt-out .verdict{color:#fff;font-weight:700;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)}
+    .nt-actions{display:flex;gap:8px}.nt-actions .btn{flex:1}
+
     /* join diagnostics overlay */
     .join-diag{position:fixed;inset:0;background:rgba(8,16,34,.97);z-index:180;display:flex;align-items:center;justify-content:center;padding:20px}
     .join-diag.hidden{display:none}
@@ -325,6 +348,7 @@
     <button class="btn btn-wb"      onclick="openPresenterPw('wb')"> 🟩 &nbsp;Presenter — Whiteboard Mode</button>
     <button class="btn btn-secondary" onclick="openAnnotatorPw()">   📱 &nbsp;Join as Annotator</button>
     <button class="btn btn-guest"     onclick="showJoinForm('guest')">👁️ &nbsp;Join as Guest (view only)</button>
+    <button class="btn btn-secondary" style="font-size:12px;padding:9px;opacity:.85" onclick="openNetTest()">📡 &nbsp;Network test (troubleshooting)</button>
   </div>
   <div id="join-section">
     <div class="join-form">
@@ -341,12 +365,13 @@
   <div class="top-bar">
     <span class="status-dot" id="pres-dot"></span>
     <span class="bar-title"  id="pres-status">Waiting…</span>
-    <span id="pres-badge" class="badge badge-gray">0 connected</span>
+    <span id="pres-badge" class="badge badge-gray" style="cursor:pointer" title="Who is connected" onclick="togglePeoplePanel()">0 connected</span>
     <div class="mode-pill">
       <button id="pill-pdf" onclick="switchPresMode('pdf')">PDF/PPT</button>
       <button id="pill-wb"  onclick="switchPresMode('wb')">WB</button>
     </div>
     <button class="icon-btn" onclick="toggleDeckPanel()" title="Switch File" style="font-size:12px;gap:3px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:6px;padding:4px 8px">📁 <span id="deck-cur-name" style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">No file</span></button>
+    <button class="icon-btn" onclick="togglePeoplePanel()" title="People — remove annotator / guests" style="font-size:12px">👥</button>
     <button class="icon-btn" onclick="toggleQR()"                  title="QR">📱</button>
     <button class="icon-btn" onclick="showCurrentPassword()"       title="Show Password">🔑</button>
     <button class="icon-btn" onclick="openAnnounce('annotator')"   title="Notify Annotator" style="font-size:13px">🔔 Ann</button>
@@ -356,7 +381,7 @@
     </button>
     <button class="icon-btn" onclick="clearPresenter()"    title="Clear">🗑️</button>
     <button class="icon-btn" onclick="toggleFullscreen()"  title="Fullscreen">⛶</button>
-    <button class="icon-btn" onclick="goHome()"            title="Exit">✕</button>
+    <button class="icon-btn" onclick="presenterExit()" title="End session">✕</button>
   </div>
 
   <div id="pdf-wrap">
@@ -392,6 +417,20 @@
   <!-- Q&A backdrop -->
   <!-- Floating file button — fullscreen only -->
   <button class="fs-file-btn" onclick="toggleDeckPanel()">📁 Files <span id="fs-cur-name" style="color:var(--lblue);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></button>
+
+  <button class="fs-file-btn" style="right:130px" onclick="togglePeoplePanel()">👥 People</button>
+
+  <!-- PEOPLE PANEL (presenter) -->
+  <div class="deck-panel hidden" id="people-panel">
+    <div class="deck-panel-head"><div class="deck-panel-title">👥 PEOPLE</div><button class="icon-btn" onclick="togglePeoplePanel()" style="font-size:13px">✕</button></div>
+    <div class="deck-list-inner" id="people-list"><div class="deck-empty">Nobody is connected.</div></div>
+    <div class="ppl-foot">
+      <button class="tool-btn" onclick="kickAllGuests()">Remove all guests</button>
+      <button class="tool-btn" onclick="kickAnnotator()">Remove annotator</button>
+      <button class="tool-btn ppl-danger" onclick="kickEveryone()">Remove everyone</button>
+      <label class="ppl-lock"><input type="checkbox" id="room-lock" onchange="setRoomLock(this.checked)"> 🔒 Lock room (no new joins)</label>
+    </div>
+  </div>
 
   <!-- DECK SWITCHER PANEL (presenter) -->
   <div class="deck-panel hidden" id="deck-panel-pres">
@@ -525,9 +564,9 @@
     <div class="color-btn"    data-color="#111"    style="background:#111;border:1px solid #555" onclick="setColor(this)"></div>
     <div class="color-btn"    data-color="#FFF"    style="background:#FFF" onclick="setColor(this)"></div>
     <div class="tb-sep"></div>
-    <button class="size-btn on" data-size="3"  onclick="setSize(this)">S</button>
-    <button class="size-btn"    data-size="7"  onclick="setSize(this)">M</button>
-    <button class="size-btn"    data-size="14" onclick="setSize(this)">L</button>
+    <button class="size-btn on" data-size="0.5" onclick="setSize(this)">S</button>
+    <button class="size-btn"    data-size="1.2" onclick="setSize(this)">M</button>
+    <button class="size-btn"    data-size="2.5" onclick="setSize(this)">L</button>
     <div class="tb-sep"></div>
     <button class="tool-btn" id="eraser-btn" onclick="toggleEraser()">⌫</button>
     <button class="tool-btn" onclick="clearCurrentPage()">🗑</button>
@@ -585,6 +624,26 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="reconnect-banner">🔄 Reconnecting to presenter…</div>
+
+<!-- NETWORK TEST -->
+<div class="nettest hidden" id="nettest">
+  <div class="nt-box">
+    <div class="nt-title">📡 Network test</div>
+    <div class="nt-sub">Checks whether this device can make a direct connection, and whether a relay server is reachable. Run it on the laptop and on the phone, then take a screenshot of each result. No IP addresses are shown.</div>
+    <details class="nt-adv">
+      <summary>Test my own relay (TURN) server — optional</summary>
+      <input id="nt-turn-url" placeholder="turn:host:443?transport=tcp" autocapitalize="off" autocorrect="off">
+      <input id="nt-turn-user" placeholder="username" autocapitalize="off" autocorrect="off">
+      <input id="nt-turn-cred" placeholder="credential" autocapitalize="off" autocorrect="off">
+    </details>
+    <div class="nt-out" id="nt-out"></div>
+    <div class="nt-actions">
+      <button class="btn btn-primary" id="nt-run" onclick="runNetTest()">▶ Run test</button>
+      <button class="btn btn-secondary" onclick="closeNetTest()">Close</button>
+    </div>
+  </div>
+</div>
 
 <!-- JOIN DIAGNOSTICS (annotator + guest) -->
 <div class="join-diag hidden" id="join-diag">
@@ -594,7 +653,7 @@
     <div class="jd-reason" id="jd-reason"></div>
     <div class="jd-log" id="jd-log"></div>
     <div class="jd-actions" id="jd-actions" style="display:none">
-      <button class="btn btn-primary" onclick="rejoinRoom()">🔄 Try again</button>
+      <button class="btn btn-primary" id="jd-retry-btn" onclick="rejoinRoom()">🔄 Try again</button>
       <button class="btn btn-secondary" onclick="goHome()">← Back</button>
     </div>
   </div>
@@ -627,7 +686,7 @@ let pendingJoinRole='';
 let pdfDoc=null,imgSlides=[],currentPage=1,totalPages=1,contentType='none';
 let decks=[],currentDeckIndex=-1; // multi-file deck manager
 let annotations={},wbStrokes=[],currentStroke=null;
-let drawColor='#EF4444',drawWidth=3,isEraser=false;
+let drawColor='#EF4444',drawWidth=0.5,isEraser=false;
 let presMode='pdf',drawerMode='pdf';
 let questions=[]; // {id,guestId,guestNum,text,time}
 let unreadQ=0;
@@ -679,64 +738,10 @@ document.getElementById('room-input').addEventListener('keyup',e=>{if(e.key==='E
 document.getElementById('guest-q-input').addEventListener('keyup',e=>{if(e.key==='Enter')sendQuestion()});
 
 // UPDATE CONNECTION COUNT BADGE
-function updatePresenterBadge(){
-  const total=(annotatorConn?1:0)+guestConns.size;
-  const el=document.getElementById('pres-badge');
-  if(total===0){el.className='badge badge-gray';el.textContent='0 connected'}
-  else{el.className='badge badge-green';el.textContent=`${total} connected`}
-  const dot=document.getElementById('pres-dot');
-  dot.className=total>0?'status-dot online':'status-dot';
-  document.getElementById('pres-status').textContent=total>0?`${annotatorConn?1:0} annotator · ${guestConns.size} guest(s)`:'Waiting…';
-}
+
 
 // PRESENTER SETUP
-function startPresenter(mode){
-  presMode=mode;showScreen('presenter');switchPresMode(mode);
-  const code=Math.floor(100000+Math.random()*900000).toString();
-  document.getElementById('room-code-display').textContent=code;
-  presenterPeer=new Peer(code,PEER_OPTS);
-  presenterPeer.on('error',err=>{if(err.type==='unavailable-id')startPresenter(mode);else toast('⚠️ '+err.type)});
-  presenterPeer.on('open',id=>{document.getElementById('room-code-display').textContent=id;generateQR(id);showQR()});
-  presenterPeer.on('connection',c=>{
-    c.on('open',()=>{c.send({type:'hello_from_presenter',presMode})});
-    c.on('data',d=>{
-      if(d.type==='identify'){
-        if(d.role==='annotator'){
-          // PASSWORD CHECK
-          if(presPassword&&d.password!==presPassword){
-            c.send({type:'auth_failed',reason:'Wrong password. Please check with the presenter.'});
-            setTimeout(()=>{try{c.close()}catch(e){}},500);
-            return;
-          }
-          annotatorConn=c;updatePresenterBadge();toast('📱 Annotator joined!');
-          c.send(modeMsg(presMode));if(presMode==='pdf'&&!(pdfDoc||imgSlides.length))c.send({type:'no_content'});
-          if(presMode==='pdf'&&(pdfDoc||imgSlides.length))sendPageToConn(c);
-          else if(presMode==='wb'){initWbPresCanvas();sendWbSnapshot()}
-          // send existing questions to annotator
-          if(questions.length)c.send({type:'all_questions',questions});
-          c.on('close',()=>{annotatorConn=null;updatePresenterBadge();toast('Annotator left')});
-        } else if(d.role==='guest'){
-          guestCounter++;const gNum=guestCounter;guestConns.set(c.peer,c);
-          c.send(modeMsg(presMode,{guestNum:gNum}));if(presMode==='pdf'&&!(pdfDoc||imgSlides.length))c.send({type:'no_content'});
-          // Small delay so connection is stable before pushing image data
-          if(presMode==='pdf'&&(pdfDoc||imgSlides.length))setTimeout(()=>sendLowResToGuest(c),1500);
-          else if(presMode==='wb')setTimeout(()=>sendWbSnapshotToConn(c,true),1500);
-          updatePresenterBadge();toast(`👁 Guest #${gNum} joined`);
-          c.on('close',()=>{guestConns.delete(c.peer);updatePresenterBadge();toast(`Guest #${gNum} left`)});
-        }
-      } else if(d.type==='question'){
-        const q={id:Date.now(),guestNum:d.guestNum,text:d.text,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})};
-        questions.push(q);
-        addQuestionToUI(q);
-        // forward to annotator
-        if(annotatorConn)annotatorConn.send({type:'new_question',question:q});
-        toast(`💬 Question from Guest #${d.guestNum}`);
-      } else {
-        handlePresenterDrawData(d); // drawing from annotator
-      }
-    });
-  });
-}
+
 
 // PRESENTER MODE SWITCH
 function switchPresMode(mode){
@@ -1238,15 +1243,15 @@ function getPt(e,canvas){
 function startDraw(e){
   e.preventDefault();const canvas=getActiveCanvas();canvas.setPointerCapture(e.pointerId);drawing=true;
   const pt=getPt(e,canvas);lastPt=pt;
-  if(clientConn)clientConn.send({type:'stroke_begin',x:pt.x,y:pt.y,color:drawColor,width:drawWidth,eraser:isEraser});
+  if(clientConn)clientConn.send({type:'stroke_begin',x:pt.x,y:pt.y,color:drawColor,width:penW(),eraser:isEraser});
   const ctx=canvas.getContext('2d');ctx.save();ctx.globalCompositeOperation=isEraser?'destination-out':'source-over';
-  ctx.fillStyle=isEraser?'rgba(0,0,0,1)':drawColor;ctx.beginPath();ctx.arc(pt.x*canvas.width,pt.y*canvas.height,drawWidth*Math.min(canvas.width,canvas.height)/200,0,Math.PI*2);ctx.fill();ctx.restore();
+  ctx.fillStyle=isEraser?'rgba(0,0,0,1)':drawColor;ctx.beginPath();ctx.arc(pt.x*canvas.width,pt.y*canvas.height,penW()*Math.min(canvas.width,canvas.height)/200,0,Math.PI*2);ctx.fill();ctx.restore();
 }
 function moveDraw(e){
   if(!drawing)return;e.preventDefault();const canvas=getActiveCanvas();const pt=getPt(e,canvas);
   if(clientConn)clientConn.send({type:'stroke_point',x:pt.x,y:pt.y});
   const ctx=canvas.getContext('2d');ctx.save();ctx.globalCompositeOperation=isEraser?'destination-out':'source-over';
-  ctx.strokeStyle=isEraser?'rgba(0,0,0,1)':drawColor;ctx.lineWidth=drawWidth*Math.min(canvas.width,canvas.height)/100;
+  ctx.strokeStyle=isEraser?'rgba(0,0,0,1)':drawColor;ctx.lineWidth=penW()*Math.min(canvas.width,canvas.height)/100;
   ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(lastPt.x*canvas.width,lastPt.y*canvas.height);ctx.lineTo(pt.x*canvas.width,pt.y*canvas.height);ctx.stroke();ctx.restore();lastPt=pt;
 }
 function endDraw(e){if(!drawing)return;drawing=false;if(clientConn)clientConn.send({type:'stroke_end'})}
@@ -1260,7 +1265,9 @@ wbCanvasDraw.addEventListener('pointerup',endDraw,{passive:false});
 
 // TOOLS
 function setColor(el){isEraser=false;document.getElementById('eraser-btn').classList.remove('on');document.querySelectorAll('.color-btn').forEach(b=>b.classList.remove('on'));el.classList.add('on');drawColor=el.dataset.color}
-function setSize(el){document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('on'));el.classList.add('on');drawWidth=parseInt(el.dataset.size)}
+function setSize(el){document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('on'));el.classList.add('on');drawWidth=parseFloat(el.dataset.size)}
+// Pen width = % of the slide's shorter side. The eraser is 4x wider so it stays usable with thin pens.
+function penW(){return isEraser?drawWidth*4:drawWidth}
 function toggleEraser(){isEraser=!isEraser;document.getElementById('eraser-btn').classList.toggle('on',isEraser)}
 function clearCurrentPage(){
   if(drawerMode==='wb'){const ctx=wbCanvasDraw.getContext('2d');ctx.fillStyle='#FFF';ctx.fillRect(0,0,wbCanvasDraw.width,wbCanvasDraw.height);if(clientConn)clientConn.send({type:'wb_clear'})}
@@ -1313,9 +1320,9 @@ function modeMsg(mode,extra){return Object.assign({type:'mode_set',mode,aspect:w
 
 // ── join diagnostics overlay ──
 function jdLog(msg,cls){const l=_el('jd-log');const t=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});l.insertAdjacentHTML('beforeend','<div class="'+(cls||'')+'">'+t+'  '+escHtml(msg)+'</div>');l.scrollTop=l.scrollHeight}
-function jdShow(title){_el('join-diag').classList.remove('hidden');_el('jd-title').textContent=title;_el('jd-reason').textContent='';_el('jd-spin').style.display='block';_el('jd-actions').style.display='none'}
+
 function jdHide(){_el('join-diag').classList.add('hidden')}
-function jdFail(title,reason){_el('join-diag').classList.remove('hidden');_el('jd-title').textContent=title;_el('jd-reason').textContent=reason;_el('jd-spin').style.display='none';_el('jd-actions').style.display='flex';jdLog('Stopped: '+title,'bad')}
+
 
 function teardownClient(){
   const c=clientConn,p=clientPeer;clientConn=null;clientPeer=null;
@@ -1326,60 +1333,17 @@ function teardownClient(){
 function startDrawer(code,password){joinRoom('annotator',code,password||'')}
 function startGuest(code){joinRoom('guest',code,'')}
 function joinRoom(role,code,password){
-  joinToken++;lastJoin={role,code,password};myRole=role;myGuestNum=0;guestHasImage=false;_gBuf={};
+  joinToken++;lastJoin={role,code,password};myRole=role;myGuestNum=0;guestHasImage=false;_gBuf={};requestWake();
   showScreen(role==='guest'?'guest':'drawer');
   _el('jd-log').innerHTML='';jdShow('Joining room '+code+'…');
   jdLog('Browser online: '+navigator.onLine);
   attemptJoin(1);
 }
 function rejoinRoom(){
-  if(!lastJoin)return;joinToken++;guestHasImage=false;_gBuf={};
+  if(!lastJoin)return;joinToken++;lastJoin.silent=false;guestHasImage=false;_gBuf={};
   _el('jd-log').innerHTML='';jdShow('Joining room '+lastJoin.code+'…');attemptJoin(1);
 }
-function attemptJoin(attempt){
-  const tk=joinToken,role=lastJoin.role,code=lastJoin.code,password=lastJoin.password,MAX=3;
-  teardownClient();
-  jdLog('Attempt '+attempt+'/'+MAX+': contacting signaling server…');
-  const t0=performance.now();let opened=false,done=false,sigT=null,connT=null;
-  const stale=()=>tk!==joinToken;
-  const fail=(why,reason)=>{
-    if(done||opened||stale())return;done=true;clearTimeout(sigT);clearTimeout(connT);
-    jdLog(why,'warn');
-    if(attempt<MAX){jdLog('Retrying in '+(1.5*attempt)+' s…');setTimeout(()=>{if(!stale())attemptJoin(attempt+1)},1500*attempt)}
-    else{teardownClient();jdFail("Couldn't join the room",reason)}
-  };
-  const peer=clientPeer=new Peer((role==='guest'?'gst_':'ann_')+Math.random().toString(36).slice(2,10),PEER_OPTS);
-  sigT=setTimeout(()=>fail('Signaling server did not answer within 10 s.',REASON_SERVER),10000);
-  peer.on('error',err=>{
-    if(opened||done||stale())return;
-    if(err.type==='peer-unavailable'){done=true;clearTimeout(sigT);clearTimeout(connT);teardownClient();jdFail('Room not found','Room '+code+' does not exist. Check the 6-digit code and make sure the presenter page is still open.');return}
-    fail('Error: '+err.type,err.type==='webrtc'?REASON_P2P:REASON_SERVER);
-  });
-  peer.on('open',()=>{
-    if(done||stale())return;clearTimeout(sigT);
-    jdLog('Server reached in '+Math.round(performance.now()-t0)+' ms. Opening link to room '+code+'…','ok');
-    const conn=clientConn=peer.connect(code,{reliable:true});
-    connT=setTimeout(()=>fail('Direct link to the presenter did not open within 15 s.',REASON_P2P),15000);
-    conn.on('open',()=>{
-      if(done||stale())return;opened=true;clearTimeout(connT);
-      jdLog('Linked to presenter in '+Math.round(performance.now()-t0)+' ms.','ok');
-      conn.send({type:'identify',role,password});
-      jdHide();
-      const dot=_el(role==='guest'?'guest-dot':'draw-dot'),st=_el(role==='guest'?'guest-status':'draw-status');
-      dot.className='status-dot online';st.textContent='Room '+code;
-      toast('✅ Connected as '+(role==='guest'?'Guest':'Annotator')+'!');
-    });
-    conn.on('data',d=>{if(stale())return;if(role==='guest')handleGuestData(d);else handleAnnotatorMsg(d)});
-    conn.on('close',()=>{
-      if(stale()||clientConn!==conn)return;
-      if(!opened){fail('Link closed before it opened.',REASON_P2P);return}
-      _el(role==='guest'?'guest-dot':'draw-dot').className='status-dot';
-      _el(role==='guest'?'guest-status':'draw-status').textContent='Disconnected';
-      _el('jd-log').innerHTML='';jdFail('Disconnected from presenter','The presenter may have closed the page, or your network dropped. Tap Try again to reconnect.');
-    });
-    conn.on('error',()=>fail('Connection error.',REASON_P2P));
-  });
-}
+
 
 function handleAnnotatorMsg(d){
   if(d.type==='auth_failed'){
@@ -1515,8 +1479,227 @@ function renderNotifs(markNew){
 }
 function clearNotifs(){notifs=[];renderNotifs(false)}
 
+
+
+// ═══════════════ v14: NETWORK TEST ═══════════════
+function openNetTest(){_el('nettest').classList.remove('hidden');_el('nt-out').innerHTML='<div>Tap "Run test". It takes about 30 seconds.</div>'}
+function closeNetTest(){_el('nettest').classList.add('hidden')}
+
+function ntParse(c){
+  const s=c.candidate||'',p=s.split(' ');
+  const t=c.type||((/ typ (\w+)/.exec(s)||[])[1]);
+  const rel=/ raddr (\S+) rport (\d+)/.exec(s)||[];
+  return{type:t,proto:(c.protocol||p[2]||'').toLowerCase(),addr:c.address||p[4]||'',port:String(c.port||p[5]||''),raddr:c.relatedAddress||rel[1]||'',rport:String(c.relatedPort||rel[2]||'')};
+}
+function gatherIce(iceServers,policy,ms){
+  return new Promise(resolve=>{
+    const res={cands:[],errors:[],error:null,done:false};
+    let pc;
+    try{pc=new RTCPeerConnection({iceServers,iceTransportPolicy:policy||'all'})}catch(e){res.error=e.message;resolve(res);return}
+    const finish=()=>{if(res.done)return;res.done=true;try{pc.close()}catch(e){}resolve(res)};
+    pc.createDataChannel('t');
+    pc.onicecandidate=e=>{if(!e.candidate){finish();return}res.cands.push(ntParse(e.candidate))};
+    pc.addEventListener('icecandidateerror',e=>res.errors.push({code:String(e.errorCode),text:e.errorText||'',url:e.url||''}));
+    pc.createOffer().then(o=>pc.setLocalDescription(o)).catch(e=>{res.error=e.message;finish()});
+    setTimeout(finish,ms);
+  });
+}
+function ntAnalyzeStun(res){
+  const c=res.cands,isV6=a=>String(a).indexOf(':')>=0;
+  const host=c.filter(x=>x.type==='host'),sr=c.filter(x=>x.type==='srflx');
+  const sr4=sr.filter(x=>!isV6(x.addr));
+  const groups={};sr4.forEach(x=>{const k=x.raddr+':'+x.rport;(groups[k]=groups[k]||new Set()).add(x.addr+':'+x.port)});
+  const symmetric=Object.keys(groups).some(k=>groups[k].size>1);
+  const stunErrs=res.errors.filter(e=>/stun:/.test(e.url||''));
+  return{hostCount:host.length,srflx4:sr4.length,ipv6:c.some(x=>isV6(x.addr)&&(x.type==='host'||x.type==='srflx')),symmetric,inconclusive:!symmetric&&sr4.length>0&&stunErrs.length>0};
+}
+function ntAnalyzeRelay(res){
+  const codes={};res.errors.forEach(e=>{codes[e.code]=(codes[e.code]||0)+1});
+  return{relay:res.cands.filter(x=>x.type==='relay').length,codes,error:res.error};
+}
+function ntRelayText(a){
+  if(a.relay>0)return{ok:true,txt:'works ('+a.relay+' relay address'+(a.relay>1?'es':'')+' obtained)'};
+  let why='no relay address obtained';
+  if(a.codes['701'])why+=' — server not reachable (blocked, offline, or shut down)';
+  else if(a.codes['401']||a.codes['403'])why+=' — server rejected the login';
+  else if(a.error)why+=' — '+a.error;
+  else why+=' — no answer before the timeout';
+  return{ok:false,txt:why};
+}
+function ntVerdict(st,relayDefault,relayCustom){
+  const defOk=relayDefault&&relayDefault.relay>0,cusOk=relayCustom&&relayCustom.relay>0;
+  if(cusOk)return'VERDICT: your own relay server works from this network — adding it to the app should fix joining from here.';
+  if(defOk)return'VERDICT: the PeerJS relay answers from this network, so joining should work. If it still fails, run the test on the other device.';
+  if(st.symmetric)return'VERDICT: this network cannot make direct connections (its public address changes per destination) and no working relay exists. Joining from here will fail unless the presenter is on the same local network.';
+  if(st.srflx4===0)return'VERDICT: no public IPv4 address was found'+(st.ipv6?' (this may be an IPv6-only network; direct links to IPv4-only devices usually fail)':' (STUN blocked or no internet)')+' and no relay works. Joining from here will probably fail.';
+  if(st.inconclusive)return'VERDICT: inconclusive — some test servers did not answer. Run it again, and also on the other device.';
+  return'VERDICT: this side looks fine for direct connections, but no relay works. If joining fails, run the test on the other device (the presenter) — the limit may be there.';
+}
+function ntTestSignaling(){
+  return new Promise(res=>{
+    const t0=performance.now();let p;
+    try{p=new Peer(PEER_OPTS)}catch(e){res({ok:false,err:e.message});return}
+    const to=setTimeout(()=>{try{p.destroy()}catch(e){}res({ok:false,err:'no answer in 10 s'})},10000);
+    p.on('open',()=>{clearTimeout(to);const ms=Math.round(performance.now()-t0);try{p.destroy()}catch(e){}res({ok:true,ms})});
+    p.on('error',e=>{clearTimeout(to);try{p.destroy()}catch(e2){}res({ok:false,err:e.type})});
+  });
+}
+async function runNetTest(){
+  const btn=_el('nt-run'),out=_el('nt-out');btn.disabled=true;btn.textContent='Running…';out.innerHTML='';
+  const L=(txt,cls)=>{out.insertAdjacentHTML('beforeend','<div class="'+(cls||'')+'">'+escHtml(txt)+'</div>');out.scrollTop=out.scrollHeight};
+  const done=()=>{btn.disabled=false;btn.textContent='▶ Run again'};
+  try{
+    const nc=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+    L('Time: '+new Date().toLocaleTimeString());
+    L('Browser online: '+navigator.onLine+(nc?' · network: '+(nc.type||'n/a')+' / '+(nc.effectiveType||'n/a')+(nc.rtt!=null?' · rtt '+nc.rtt+' ms':''):''));
+    L('✓ This page loaded from '+location.host+', so the website connection is fine.','ok');
+    if(typeof RTCPeerConnection==='undefined'){L('✗ This browser has no WebRTC.','bad');done();return}
+    L('1/4 Signaling server…');
+    const sig=await ntTestSignaling();
+    L(sig.ok?'✓ Signaling server answered in '+sig.ms+' ms':'✗ Signaling server: '+sig.err,sig.ok?'ok':'bad');
+    L('2/4 Direct-connection check (STUN)…');
+    const st=ntAnalyzeStun(await gatherIce([{urls:'stun:stun.l.google.com:19302'},{urls:'stun:global.stun.twilio.com:3478'}],'all',7000));
+    L((st.srflx4>0?'✓':'✗')+' Public IPv4 address found: '+(st.srflx4>0?'yes':'no'),st.srflx4>0?'ok':'bad');
+    if(st.srflx4>0){
+      if(st.symmetric)L('✗ Address changes per destination (symmetric / carrier NAT): direct links usually fail','bad');
+      else if(st.inconclusive)L('⚠ Some test servers did not answer — NAT type inconclusive','warn');
+      else L('✓ Address stays the same per destination: direct links are usually possible','ok');
+    }
+    L('ℹ IPv6 address present: '+(st.ipv6?'yes':'no')+' · local addresses: '+st.hostCount);
+    L('3/4 PeerJS relay (the one the app uses now)…');
+    const rd=ntAnalyzeRelay(await gatherIce([{urls:['turn:eu-0.turn.peerjs.com:3478','turn:us-0.turn.peerjs.com:3478'],username:'peerjs',credential:'peerjsp'}],'relay',9000));
+    const rdt=ntRelayText(rd);L((rdt.ok?'✓':'✗')+' PeerJS relay: '+rdt.txt,rdt.ok?'ok':'bad');
+    let rc=null;const cu=_el('nt-turn-url').value.trim();
+    if(cu){
+      L('4/4 Your relay…');
+      rc=ntAnalyzeRelay(await gatherIce([{urls:cu,username:_el('nt-turn-user').value.trim(),credential:_el('nt-turn-cred').value.trim()}],'relay',9000));
+      const rct=ntRelayText(rc);L((rct.ok?'✓':'✗')+' Your relay: '+rct.txt,rct.ok?'ok':'bad');
+    }else L('4/4 Your relay: skipped (optional)');
+    L(ntVerdict(st,rd,rc),'verdict');
+  }catch(e){L('✗ Test crashed: '+e.message,'bad')}
+  done();
+}
+
+// ═══════════════ v16: STAY CONNECTED + REMOVE PEOPLE ═══════════════
+let KA_INTERVAL=8000,KA_DEAD=30000,PRES_WATCH_MS=10000,PRES_DEAD=45000;
+let kaTimer=null,lastSeenFromPresenter=0,presWatch=null,roomLocked=false,wakeLock=null,wantAwake=false;
+const REASON_GONE="The room can't be found any more. The presenter may have closed the page or lost internet.";
+
+// ── keep the screen on (Screen Wake Lock) ──
+async function requestWake(){
+  wantAwake=true;
+  if(!('wakeLock' in navigator)){
+    if(!window._wakeWarned){window._wakeWarned=true;toast('⚠️ This browser cannot keep the screen on. Set a longer screen timeout in the device settings.',6000)}
+    return;
+  }
+  if(wakeLock)return;
+  try{
+    const wl=await navigator.wakeLock.request('screen');wakeLock=wl;
+    wl.addEventListener('release',()=>{if(wakeLock===wl)wakeLock=null});
+    if(!window._wakeToast){window._wakeToast=true;toast('☀ Screen will stay on during the session',2500)}
+  }catch(e){wakeLock=null}
+}
+function releaseWake(){wantAwake=false;const w=wakeLock;wakeLock=null;try{if(w)w.release()}catch(e){}}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='visible')return;
+  if(wantAwake&&!wakeLock)requestWake();
+  if(presenterPeer&&!presenterPeer.destroyed&&presenterPeer.disconnected){try{presenterPeer.reconnect()}catch(e){}}
+  if(lastJoin&&!lastJoin.silent&&clientConn&&(clientConn.open===false||Date.now()-lastSeenFromPresenter>20000))linkLost('The tab woke up with a dead link');
+});
+document.addEventListener('pointerdown',()=>{if(wantAwake&&!wakeLock)requestWake()},{passive:true});
+
+// ── keep-alive + silent auto-reconnect (annotator / guest) ──
+function startKeepalive(conn,tk){
+  stopKeepalive();lastSeenFromPresenter=Date.now();
+  kaTimer=setInterval(()=>{
+    if(tk!==joinToken||clientConn!==conn){stopKeepalive();return}
+    try{if(conn.open!==false)conn.send({type:'ping'})}catch(e){}
+    if(Date.now()-lastSeenFromPresenter>KA_DEAD)linkLost('No reply from the presenter');
+  },KA_INTERVAL);
+}
+function stopKeepalive(){clearInterval(kaTimer);kaTimer=null}
+function setReconnectBanner(show){const b=_el('reconnect-banner');if(b)b.classList.toggle('show',!!show)}
+function linkLost(why){if(!lastJoin||lastJoin.silent)return;rejoinSilent(why)}
+function rejoinSilent(why){
+  if(!lastJoin)return;
+  stopKeepalive();joinToken++;lastJoin.silent=true;setReconnectBanner(true);
+  const g=lastJoin.role==='guest';
+  _el(g?'guest-dot':'draw-dot').className='status-dot';_el(g?'guest-status':'draw-status').textContent='Reconnecting…';
+  attemptJoin(1);
+}
+function jdShow(title){_el('join-diag').classList.remove('hidden');_el('jd-title').textContent=title;_el('jd-reason').textContent='';_el('jd-spin').style.display='block';_el('jd-actions').style.display='none';_el('jd-retry-btn').style.display='';_el('jd-log').style.display=''}
+function jdFail(title,reason){_el('join-diag').classList.remove('hidden');_el('jd-title').textContent=title;_el('jd-reason').textContent=reason;_el('jd-spin').style.display='none';_el('jd-actions').style.display='flex';_el('jd-retry-btn').style.display='';_el('jd-log').style.display='';jdLog('Stopped: '+title,'bad')}
+function handleKicked(reason,title){
+  joinToken++;lastJoin=null;stopKeepalive();setReconnectBanner(false);teardownClient();
+  _el('join-diag').classList.remove('hidden');_el('jd-log').innerHTML='';
+  _el('jd-title').textContent=title||'Removed from the room';_el('jd-reason').textContent=reason||'You were removed by the presenter.';
+  _el('jd-spin').style.display='none';_el('jd-actions').style.display='flex';_el('jd-retry-btn').style.display='none';_el('jd-log').style.display='none';
+}
+
+function attemptJoin(attempt){
+  const tk=joinToken,role=lastJoin.role,code=lastJoin.code,password=lastJoin.password;
+  const silent=!!lastJoin.silent,MAX=silent?10:3;
+  teardownClient();
+  const log=(m,c)=>{if(!silent)jdLog(m,c)};
+  log('Attempt '+attempt+'/'+MAX+': contacting signaling server…');
+  const t0=performance.now();let opened=false,done=false,sigT=null,connT=null;
+  const stale=()=>tk!==joinToken;
+  const fail=(why,reason)=>{
+    if(done||opened||stale())return;done=true;clearTimeout(sigT);clearTimeout(connT);
+    log(why,'warn');
+    if(attempt<MAX){const wait=Math.min(1500*attempt,8000);log('Retrying in '+(wait/1000)+' s…');setTimeout(()=>{if(!stale())attemptJoin(attempt+1)},wait)}
+    else{
+      teardownClient();
+      if(silent){lastJoin.silent=false;setReconnectBanner(false);_el('jd-log').innerHTML='';jdLog('Could not re-establish the link after '+MAX+' attempts.','bad')}
+      jdFail(silent?'Lost connection to the presenter':"Couldn't join the room",reason);
+    }
+  };
+  const peer=clientPeer=new Peer((role==='guest'?'gst_':'ann_')+Math.random().toString(36).slice(2,10),PEER_OPTS);
+  sigT=setTimeout(()=>fail('Signaling server did not answer within 10 s.',REASON_SERVER),10000);
+  peer.on('error',err=>{
+    if(opened||done||stale())return;
+    if(err.type==='peer-unavailable'){
+      if(silent){fail('Room not found (attempt '+attempt+').',REASON_GONE);return}
+      done=true;clearTimeout(sigT);clearTimeout(connT);teardownClient();
+      jdFail('Room not found','Room '+code+' does not exist. Check the 6-digit code and make sure the presenter page is still open.');return;
+    }
+    fail('Error: '+err.type,err.type==='webrtc'?REASON_P2P:REASON_SERVER);
+  });
+  peer.on('open',()=>{
+    if(done||stale())return;clearTimeout(sigT);
+    log('Server reached in '+Math.round(performance.now()-t0)+' ms. Opening link to room '+code+'…','ok');
+    const conn=clientConn=peer.connect(code,{reliable:true});
+    connT=setTimeout(()=>fail('Direct link to the presenter did not open within 15 s.',REASON_P2P),15000);
+    conn.on('open',()=>{
+      if(done||stale())return;opened=true;clearTimeout(connT);
+      log('Linked to presenter in '+Math.round(performance.now()-t0)+' ms.','ok');
+      conn.send({type:'identify',role,password,guestNum:role==='guest'?myGuestNum:0});
+      const was=lastJoin.silent;lastJoin.silent=false;setReconnectBanner(false);jdHide();
+      _el(role==='guest'?'guest-dot':'draw-dot').className='status-dot online';
+      _el(role==='guest'?'guest-status':'draw-status').textContent='Room '+code;
+      toast(was?'✅ Reconnected':'✅ Connected as '+(role==='guest'?'Guest':'Annotator')+'!');
+      startKeepalive(conn,tk);requestWake();
+    });
+    conn.on('data',d=>{
+      if(stale())return;
+      lastSeenFromPresenter=Date.now();
+      if(d.type==='pong')return;
+      if(d.type==='kicked'){handleKicked(d.reason,d.title);return}
+      if(role==='guest')handleGuestData(d);else handleAnnotatorMsg(d);
+    });
+    conn.on('close',()=>{
+      if(stale()||clientConn!==conn)return;
+      if(!opened){fail('Link closed before it opened.',REASON_P2P);return}
+      linkLost('The link closed');
+    });
+    conn.on('error',()=>fail('Connection error.',REASON_P2P));
+  });
+}
+
 function resetClientUI(){
-  joinToken++;lastJoin=null;jdHide();
+  joinToken++;lastJoin=null;jdHide();stopKeepalive();setReconnectBanner(false);releaseWake();
+  clearInterval(presWatch);presWatch=null;roomLocked=false;
+  const lk=_el('room-lock');if(lk)lk.checked=false;const pp=_el('people-panel');if(pp)pp.classList.add('hidden');
   zoomLevel=1;panMode=false;myGuestNum=0;guestHasImage=false;_gBuf={};notifs=[];focusUnseen=0;
   const d=_el('drawer');if(d)d.classList.remove('focus','pan');
   const zl=_el('zoom-lbl');if(zl)zl.textContent='1×';
@@ -1525,6 +1708,129 @@ function resetClientUI(){
   const wt=_el('draw-waiting-txt');if(wt)wt.textContent='Waiting for presenter…';
   const gt=_el('guest-wait-txt');if(gt)gt.textContent='Waiting for presenter to start…';
   const rb=_el('guest-refresh-btn');if(rb)rb.style.display='none';
+}
+
+// ── presenter: room, watchdog, people ──
+function startPresWatchdog(){
+  clearInterval(presWatch);
+  presWatch=setInterval(()=>{
+    const now=Date.now();
+    const dead=c=>c&&c._hasPing&&c.open!==false&&now-(c._lastSeen||now)>PRES_DEAD;   // only clients that send pings (older pages are left alone)
+    if(dead(annotatorConn)){try{annotatorConn.close()}catch(e){}}
+    guestConns.forEach(c=>{if(dead(c)){try{c.close()}catch(e){}}});
+  },PRES_WATCH_MS);
+}
+function updatePresenterBadge(){
+  const total=(annotatorConn?1:0)+guestConns.size;
+  const el=document.getElementById('pres-badge');
+  if(total===0){el.className='badge badge-gray';el.textContent='0 connected'}
+  else{el.className='badge badge-green';el.textContent=`${total} connected`}
+  const dot=document.getElementById('pres-dot');
+  dot.className=total>0?'status-dot online':'status-dot';
+  document.getElementById('pres-status').textContent=total>0?`${annotatorConn?1:0} annotator · ${guestConns.size} guest(s)`:'Waiting…';
+  renderPeople();
+}
+function renderPeople(){
+  const el=_el('people-list');if(!el)return;
+  const rows=[];
+  if(annotatorConn)rows.push('<div class="ppl-row"><span>📱 Annotator</span><button class="tool-btn" onclick="kickAnnotator()">Remove</button></div>');
+  [...guestConns.values()].sort((a,b)=>(a._gnum||0)-(b._gnum||0)).forEach(c=>rows.push('<div class="ppl-row"><span>👁 Guest #'+(c._gnum||'?')+'</span><button class="tool-btn" data-peer="'+c.peer+'" onclick="kickGuest(this.dataset.peer)">Remove</button></div>'));
+  el.innerHTML=rows.length?rows.join(''):'<div class="deck-empty">Nobody is connected.</div>';
+}
+function togglePeoplePanel(){const p=_el('people-panel');const open=p.classList.contains('hidden');p.classList.toggle('hidden',!open);if(open){const d=_el('deck-panel-pres');if(d)d.classList.add('hidden');renderPeople()}}
+function kickConn(c,reason){
+  if(!c)return;c._kicked=true;
+  try{c.send({type:'kicked',reason:reason||'You were removed by the presenter.'})}catch(e){}
+  setTimeout(()=>{try{c.close()}catch(e){}},400);
+}
+function kickGuest(peerId){const c=guestConns.get(peerId);if(!c)return;guestConns.delete(peerId);kickConn(c);updatePresenterBadge();toast('🚫 Guest #'+(c._gnum||'?')+' removed')}
+function kickAnnotator(){if(!annotatorConn)return;const c=annotatorConn;annotatorConn=null;kickConn(c);updatePresenterBadge();toast('🚫 Annotator removed')}
+function kickAllGuests(skipConfirm){
+  if(!guestConns.size){toast('No guests connected');return}
+  if(!skipConfirm&&!confirm('Remove all '+guestConns.size+' guest(s)?'))return;
+  const n=guestConns.size;guestConns.forEach(c=>kickConn(c));guestConns.clear();updatePresenterBadge();toast('🚫 '+n+' guest(s) removed');
+}
+function kickEveryone(){
+  if(!annotatorConn&&!guestConns.size){toast('Nobody is connected');return}
+  if(!confirm('Remove the annotator and all guests?'))return;
+  if(guestConns.size){const n=guestConns.size;guestConns.forEach(c=>kickConn(c));guestConns.clear()}
+  if(annotatorConn){const c=annotatorConn;annotatorConn=null;kickConn(c)}
+  updatePresenterBadge();toast('🚫 Everyone removed');
+}
+function setRoomLock(on){roomLocked=!!on;toast(on?'🔒 Room locked — new joins are refused':'🔓 Room unlocked',2500)}
+
+// Ending the session on purpose: tell everyone first so they don't keep trying to reconnect
+function presenterExit(){
+  const cs=[annotatorConn,...guestConns.values()].filter(Boolean);
+  if(!cs.length){goHome();return}
+  if(!confirm('End the session? '+cs.length+' connected device(s) will be disconnected.'))return;
+  cs.forEach(c=>{c._kicked=true;try{c.send({type:'kicked',title:'Session ended',reason:'The presenter ended the session.'})}catch(e){}});
+  setTimeout(goHome,400);
+}
+
+function startPresenter(mode){
+  presMode=mode;showScreen('presenter');switchPresMode(mode);requestWake();
+  const code=Math.floor(100000+Math.random()*900000).toString();
+  document.getElementById('room-code-display').textContent=code;
+  presenterPeer=new Peer(code,PEER_OPTS);
+  let firstOpen=true,sigRetry=0;
+  presenterPeer.on('error',err=>{if(err.type==='unavailable-id')startPresenter(mode);else toast('⚠️ '+err.type)});
+  presenterPeer.on('open',id=>{sigRetry=0;document.getElementById('room-code-display').textContent=id;if(firstOpen){firstOpen=false;generateQR(id);showQR()}});
+  // keep the room registered on the signaling server (it forgets pages that go idle or offline)
+  presenterPeer.on('disconnected',()=>{
+    const p=presenterPeer;if(!p||p.destroyed)return;
+    sigRetry++;setTimeout(()=>{try{if(presenterPeer===p&&!p.destroyed&&p.disconnected)p.reconnect()}catch(e){}},Math.min(1500*sigRetry,10000));
+  });
+  startPresWatchdog();
+  presenterPeer.on('connection',c=>{
+    c.on('open',()=>{c.send({type:'hello_from_presenter',presMode})});
+    c._lastSeen=Date.now();
+    c.on('data',d=>{
+      c._lastSeen=Date.now();
+      if(d.type==='ping'){c._hasPing=true;try{c.send({type:'pong'})}catch(e){}return}
+      if(d.type==='identify'){
+        if(roomLocked){c._kicked=true;try{c.send({type:'kicked',reason:'The presenter has locked this room. Ask the presenter to unlock it.'})}catch(e){}setTimeout(()=>{try{c.close()}catch(e){}},400);return}
+        if(d.role==='annotator'){
+          // PASSWORD CHECK
+          if(presPassword&&d.password!==presPassword){
+            c.send({type:'auth_failed',reason:'Wrong password. Please check with the presenter.'});
+            setTimeout(()=>{try{c.close()}catch(e){}},500);
+            return;
+          }
+          if(annotatorConn&&annotatorConn!==c){const old=annotatorConn;annotatorConn=null;old._kicked=true;try{old.close()}catch(e){}}   // a reconnect replaces the stale link
+          annotatorConn=c;updatePresenterBadge();toast('📱 Annotator joined!');
+          c.send(modeMsg(presMode));if(presMode==='pdf'&&!(pdfDoc||imgSlides.length))c.send({type:'no_content'});
+          if(presMode==='pdf'&&(pdfDoc||imgSlides.length))sendPageToConn(c);
+          else if(presMode==='wb'){initWbPresCanvas();sendWbSnapshot()}
+          // send existing questions to annotator
+          if(questions.length)c.send({type:'all_questions',questions});
+          c.on('close',()=>{if(annotatorConn===c){annotatorConn=null;updatePresenterBadge();if(!c._kicked)toast('Annotator left')}});
+        } else if(d.role==='guest'){
+          // a reconnecting guest keeps its number when it is free
+          const want=parseInt(d.guestNum,10);let gNum;
+          if(want>0&&![...guestConns.values()].some(x=>x._gnum===want))gNum=want;else gNum=++guestCounter;
+          guestCounter=Math.max(guestCounter,gNum);c._gnum=gNum;guestConns.set(c.peer,c);
+          c.send(modeMsg(presMode,{guestNum:gNum}));if(presMode==='pdf'&&!(pdfDoc||imgSlides.length))c.send({type:'no_content'});
+          // Small delay so connection is stable before pushing image data
+          if(presMode==='pdf'&&(pdfDoc||imgSlides.length))setTimeout(()=>sendLowResToGuest(c),1500);
+          else if(presMode==='wb')setTimeout(()=>sendWbSnapshotToConn(c,true),1500);
+          updatePresenterBadge();toast(`👁 Guest #${gNum} joined`);
+          c.on('close',()=>{guestConns.delete(c.peer);updatePresenterBadge();if(!c._kicked)toast(`Guest #${gNum} left`)});
+        }
+      } else if(d.type==='question'){
+        if(!guestConns.has(c.peer))return;          // only identified guests can ask
+        const q={id:Date.now(),guestNum:c._gnum,text:d.text,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})};
+        questions.push(q);
+        addQuestionToUI(q);
+        if(annotatorConn)annotatorConn.send({type:'new_question',question:q});
+        toast(`💬 Question from Guest #${c._gnum}`);
+      } else if(d.type==='guest_refresh_request'){
+        if(guestConns.has(c.peer))setTimeout(()=>sendLowResToGuest(c),300);
+      } else if(c===annotatorConn){
+        handlePresenterDrawData(d);                 // drawing / slide control: ONLY from the verified annotator
+      }                                             // anything else (e.g. from a guest) is ignored
+    });
+  });
 }
 
 // ── PASSWORD SYSTEM ──
